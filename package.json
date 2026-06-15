@@ -1,27 +1,34 @@
 {
-	"name": "obsidian-sample-plugin",
-	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
-	"main": "main.js",
-	"type": "module",
-	"scripts": {
+  "name": "obsidian-codec",
+  "version": "1.0.0",
+  "description": "A codec plugin for Obsidian",
+  "main": "main.js",
+  "scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json",
-		"lint": "eslint ."
+		"build": "npm run lint && node esbuild.config.mjs --production && node copy-to-obsidian.mjs",
+		"lint": "eslint src --ext .ts",
+		"deploy": "node copy-to-obsidian.mjs"
 	},
-	"keywords": [],
-	"license": "0-BSD",
-	"devDependencies": {
-		"@eslint/js": "^9.39.4",
-		"@types/node": "^22.15.17",
-		"esbuild": "0.25.5",
-		"eslint": "^9.39.4",
-		"eslint-plugin-obsidianmd": "^0.3.0",
-		"globals": "^17.6.0",
-		"jiti": "^2.6.1",
-		"obsidian": "latest",
-		"typescript": "^5.8.3",
-		"typescript-eslint": "^8.59.1"
-	}
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "codec"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^16.11.6",
+    "@typescript-eslint/eslint-plugin": "5.29.0",
+    "@typescript-eslint/parser": "5.29.0",
+    "builtin-modules": "3.3.0",
+    "esbuild": "^0.17.3",
+    "eslint": "^8.57.0",
+    "obsidian": "latest",
+    "tslib": "2.4.0",
+    "typescript": "4.9.5"
+  },
+  "dependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "crypto-js": "^4.2.0"
+  }
 }

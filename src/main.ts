@@ -1,114 +1,216 @@
-import {
-	Editor,
-	MarkdownView,
-	MarkdownFileInfo,
-	Modal,
-	Notice,
-	Plugin,
-} from 'obsidian';
-import {
-	DEFAULT_SETTINGS,
-	MyPluginSettings,
-	SampleSettingTab,
-} from './settings';
+import { Plugin, Notice, WorkspaceLeaf, Workspace } from 'obsidian';
+import { CodecView } from './codec-view';
+import { ChainProcessor } from './chain-processor';
+import { globalRegistry } from './operation-registry';
+import { registerAllOperations } from './operations/registry';
+import { VIEW_TYPE, DEFAULT_PLUGIN_STATE } from './constants';
+import type { PluginState, OperationConfig } from './types';
 
-// Remember to rename these classes and interfaces!
-
-export default class MyPlugin extends Plugin {
-	settings!: MyPluginSettings;
+export default class CodecPlugin extends Plugin {
+	data: PluginState = DEFAULT_PLUGIN_STATE;
+	chainProcessor!: ChainProcessor;
 
 	async onload() {
-		await this.loadSettings();
+		this.data = Object.assign({}, DEFAULT_PLUGIN_STATE, await this.loadData());
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		this.chainProcessor = new ChainProcessor(globalRegistry);
+
+		registerAllOperations();
+
+		this.registerView(VIEW_TYPE, (leaf) => new CodecView(leaf as WorkspaceLeaf, this));
+
+		this.addRibbonIcon('settings', '打开 Codec', (evt: MouseEvent) => {
+			void this.activateView();
 		});
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
+			id: 'open-codec-view',
+			name: '打开 Codec',
 			callback: () => {
-				new SampleModal(this.app).open();
+				void this.activateView();
 			},
 		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (
-				editor: Editor,
-				_ctx: MarkdownView | MarkdownFileInfo,
-			) => {
-				editor.replaceSelection('Sample editor command');
-			},
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+		this.addCommand({
+			id: 'send-to-codec',
+			name: '发送选中内容到 Codec',
+			editorCallback: (editor, ctx) => {
+				const selectedText = editor.getSelection();
+				if (selectedText) {
+					void this.sendToCodec(selectedText);
+				} else {
+					new Notice('请先选择文本');
 				}
-				return false;
 			},
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-			new Notice('Click');
+		this.addCommand({
+			id: 'quick-base64-encode',
+			name: '快速 Base64 编码',
+			editorCallback: (editor, ctx) => {
+				const selectedText = editor.getSelection();
+				if (selectedText) {
+					void this.quickOperation('base64-encode', selectedText, editor);
+				} else {
+					new Notice('请先选择文本');
+				}
+			},
 		});
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(
-			window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
-		);
+		this.addCommand({
+			id: 'quick-base64-decode',
+			name: '快速 Base64 解码',
+			editorCallback: (editor, ctx) => {
+				const selectedText = editor.getSelection();
+				if (selectedText) {
+					void this.quickOperation('base64-decode', selectedText, editor);
+				} else {
+					new Notice('请先选择文本');
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'move-to-codec-input',
+			name: '移动选中内容到 Codec 输入框',
+			editorCallback: (editor, ctx) => {
+				const selectedText = editor.getSelection();
+				if (selectedText) {
+					void this.moveToInput(selectedText);
+				} else {
+					new Notice('请先选择文本');
+				}
+			},
+		});
 	}
 
-	onunload() {}
-
-	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MyPluginSettings>,
-		);
+	onunload() {
+		console.log('Unloading Codec Plugin');
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
+	async activateView() {
+		const workspace = this.app.workspace as Workspace;
 
-class SampleModal extends Modal {
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText('Woah!');
+		let leaf: WorkspaceLeaf | null = null;
+		const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE);
+
+		if (existingLeaves.length > 0) {
+			leaf = existingLeaves[0];
+		} else {
+			// 使用 'tab' 模式在当前视图创建新标签页，而不是分割视图
+			leaf = workspace.getLeaf('tab');
+		}
+
+		if (leaf) {
+			await leaf.setViewState({ type: VIEW_TYPE, active: true });
+		}
+
+		workspace.revealLeaf(leaf);
 	}
 
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
+	get globalRegistry() {
+		return globalRegistry;
+	}
+
+	showMessage(message: string): void {
+		new Notice(message);
+	}
+
+	async sendToCodec(text: string): Promise<void> {
+		await this.activateView();
+		
+		const activeView = this.app.workspace.getActiveViewOfType(CodecView);
+		if (activeView?.containerEl) {
+			const inputArea = activeView.containerEl.querySelector('.codec-input-area') as HTMLTextAreaElement;
+			if (inputArea) {
+				inputArea.value = text;
+				inputArea.dispatchEvent(new Event('input', { bubbles: true }));
+			}
+		}
+	}
+
+	async moveToInput(text: string): Promise<void> {
+		await this.activateView();
+		
+		const activeView = this.app.workspace.getActiveViewOfType(CodecView);
+		if (activeView?.containerEl) {
+			const inputArea = activeView.containerEl.querySelector('.codec-input-area') as HTMLTextAreaElement;
+			if (inputArea) {
+				// 追加模式：在现有内容后添加
+				inputArea.value += text;
+				inputArea.dispatchEvent(new Event('input', { bubbles: true }));
+				new Notice('内容已移动到输入框');
+			}
+		}
+	}
+
+	async quickOperation(operationId: string, text: string, editor: any): Promise<void> {
+		try {
+			const result = await this.chainProcessor.executeChain(text, [
+				{ operationId, config: {} }
+			]);
+
+			if (result.success) {
+				editor.replaceSelection(result.data);
+				new Notice('操作成功');
+			} else {
+				new Notice(`操作失败: ${result.error}`);
+			}
+		} catch (error) {
+			new Notice(`操作出错: ${error instanceof Error ? error.message : '未知错误'}`);
+		}
+	}
+
+	replaceSelectedText(text: string): void {
+		const activeView = this.app.workspace.getActiveViewOfType<any>();
+		if (activeView && activeView.editor) {
+			activeView.editor.replaceSelection(text);
+			new Notice('文本已替换');
+		} else {
+			new Notice('没有活动的编辑器');
+		}
+	}
+
+	saveOperationChain(name: string, chain: OperationConfig[]): void {
+		if (!this.data.savedChains) {
+			this.data.savedChains = [];
+		}
+
+		const existingIndex = this.data.savedChains.findIndex(c => c.name === name);
+		if (existingIndex >= 0) {
+			this.data.savedChains[existingIndex] = {
+				id: this.data.savedChains[existingIndex].id,
+				name,
+				operations: chain,
+				createdAt: this.data.savedChains[existingIndex].createdAt,
+				lastUsed: Date.now()
+			};
+		} else {
+			this.data.savedChains.push({
+				id: `chain-${Date.now()}`,
+				name,
+				operations: chain,
+				createdAt: Date.now(),
+				lastUsed: Date.now()
+			});
+		}
+
+		if (chain.lastUsed) {
+			void this.saveData(this.data);
+		}
+	}
+
+	loadOperationChain(chainId: string): OperationConfig[] | null {
+		const chain = this.data.savedChains?.find(c => c.id === chainId);
+		if (chain) {
+			chain.lastUsed = Date.now();
+			void this.saveData(this.data);
+			return chain.operations;
+		}
+		return null;
+	}
+
+	getSavedChains(): any[] {
+		return this.data.savedChains || [];
 	}
 }

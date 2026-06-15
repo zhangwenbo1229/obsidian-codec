@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "obsidian-codec",
+	"name": "Obsidian Codec",
 	"version": "1.0.0",
-	"minAppVersion": "1.0.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"minAppVersion": "0.15.0",
+	"description": "全能编解码插件 - 支持多种编码格式、加密算法、哈希运算和时间日期转换，带有可视化操作链和状态管理功能",
+	"author": "zhangwenbo1229",
+	"authorUrl": "https://github.com/zhangwenbo1229",
 	"isDesktopOnly": false
 }

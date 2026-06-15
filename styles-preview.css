@@ -1,0 +1,493 @@
+/*
+Codec Plugin - Modern CyberChef-inspired Interface
+Theme: Dark technical workspace with subtle gradients and smooth interactions
+*/
+
+:root {
+	--codec-primary: #6366f1;
+	--codec-primary-hover: #4f46e5;
+	--codec-secondary: #8b5cf6;
+	--codec-success: #10b981;
+	--codec-warning: #f59e0b;
+	--codec-error: #ef4444;
+	--codec-bg-primary: #0f172a;
+	--codec-bg-secondary: #1e293b;
+	--codec-bg-tertiary: #334155;
+	--codec-text-primary: #f1f5f9;
+	--codec-text-secondary: #cbd5e1;
+	--codec-text-muted: #64748b;
+	--codec-border: #475569;
+	--codec-shadow: rgba(0, 0, 0, 0.3);
+	--codec-glow: rgba(99, 102, 241, 0.15);
+}
+
+/* Main codec view styling */
+.codec-layout {
+	display: flex;
+	height: 100vh;
+	gap: 0;
+	background: var(--codec-bg-primary);
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.codec-layout * {
+	box-sizing: border-box;
+}
+
+/* Left panel - Operation library */
+.codec-left-panel {
+	width: 280px;
+	min-width: 250px;
+	background: var(--codec-bg-secondary);
+	border-right: 1px solid var(--codec-border);
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+	overflow: hidden;
+}
+
+.codec-left-panel h3 {
+	margin: 0;
+	padding: 16px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--codec-text-primary);
+	background: var(--codec-bg-tertiary);
+	border-bottom: 1px solid var(--codec-border);
+	letter-spacing: 0.5px;
+}
+
+.codec-search {
+	padding: 12px 16px;
+	margin: 16px;
+	background: var(--codec-bg-tertiary);
+	border: 1px solid var(--codec-border);
+	border-radius: 8px;
+	color: var(--codec-text-primary);
+	font-size: 13px;
+	outline: none;
+	transition: all 0.2s;
+}
+
+.codec-search:focus {
+	border-color: var(--codec-primary);
+	box-shadow: 0 0 0 2px var(--codec-glow);
+}
+
+.codec-category-filter {
+	margin: 0 16px 12px;
+	padding: 8px 12px;
+	background: var(--codec-bg-tertiary);
+	border: 1px solid var(--codec-border);
+	border-radius: 6px;
+	color: var(--codec-text-secondary);
+	font-size: 12px;
+	outline: none;
+	cursor: pointer;
+}
+
+.codec-operation-list {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0 16px 16px;
+}
+
+.codec-operation-list::-webkit-scrollbar {
+	width: 6px;
+}
+
+.codec-operation-list::-webkit-scrollbar-track {
+	background: var(--codec-bg-tertiary);
+}
+
+.codec-operation-list::-webkit-scrollbar-thumb {
+	background: var(--codec-border);
+	border-radius: 3px;
+}
+
+.codec-operation-list::-webkit-scrollbar-thumb:hover {
+	background: var(--codec-text-muted);
+}
+
+.codec-operation-category {
+	margin-bottom: 20px;
+}
+
+.codec-operation-category h4 {
+	margin: 0 0 12px 0;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	color: var(--codec-text-muted);
+	padding-left: 4px;
+}
+
+.codec-operation-card {
+	padding: 12px;
+	margin-bottom: 8px;
+	background: var(--codec-bg-tertiary);
+	border: 1px solid var(--codec-border);
+	border-radius: 8px;
+	cursor: grab;
+	transition: all 0.2s;
+	position: relative;
+	overflow: hidden;
+}
+
+.codec-operation-card::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background: linear-gradient(90deg, var(--codec-primary), var(--codec-secondary));
+	transform: scaleX(0);
+	transition: transform 0.3s;
+}
+
+.codec-operation-card:hover::before {
+	transform: scaleX(1);
+}
+
+.codec-operation-card:hover {
+	border-color: var(--codec-primary);
+	box-shadow: 0 4px 12px var(--codec-shadow);
+	transform: translateY(-1px);
+}
+
+.codec-operation-card:active {
+	cursor: grabbing;
+	transform: translateY(0);
+}
+
+.codec-operation-card > div:first-child {
+	font-weight: 500;
+	color: var(--codec-text-primary);
+	font-size: 13px;
+	margin-bottom: 4px;
+}
+
+.codec-operation-card > div:last-child {
+	font-size: 11px;
+	color: var(--codec-text-muted);
+	line-height: 1.4;
+}
+
+/* Middle panel - Operation chain */
+.codec-middle-panel {
+	flex: 1;
+	min-width: 320px;
+	background: var(--codec-bg-primary);
+	display: flex;
+	flex-direction: column;
+	border-right: 1px solid var(--codec-border);
+}
+
+.codec-middle-panel h3 {
+	margin: 0;
+	padding: 16px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--codec-text-primary);
+	background: var(--codec-bg-secondary);
+	border-bottom: 1px solid var(--codec-border);
+	letter-spacing: 0.5px;
+}
+
+.codec-chain-container {
+	flex: 1;
+	min-height: 200px;
+	max-height: calc(100vh - 300px);
+	margin: 16px;
+	padding: 16px;
+	background: var(--codec-bg-secondary);
+	border: 2px dashed var(--codec-border);
+	border-radius: 12px;
+	overflow-y: auto;
+	position: relative;
+	transition: all 0.3s;
+}
+
+.codec-chain-container.drag-over {
+	border-color: var(--codec-primary);
+	background: rgba(99, 102, 241, 0.05);
+}
+
+.codec-chain-placeholder {
+	text-align: center;
+	color: var(--codec-text-muted);
+	padding: 40px 20px;
+	font-size: 13px;
+	line-height: 1.6;
+}
+
+.codec-chain-placeholder::before {
+	content: '📦';
+	display: block;
+	font-size: 32px;
+	margin-bottom: 12px;
+	opacity: 0.5;
+}
+
+.codec-chain-item {
+	padding: 12px 16px;
+	margin-bottom: 8px;
+	background: linear-gradient(135deg, var(--codec-bg-tertiary), var(--codec-bg-secondary));
+	border: 1px solid var(--codec-primary);
+	border-radius: 8px;
+	cursor: move;
+	position: relative;
+	overflow: hidden;
+	transition: all 0.2s;
+}
+
+.codec-chain-item::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 4px;
+	height: 100%;
+	background: linear-gradient(180deg, var(--codec-primary), var(--codec-secondary));
+}
+
+.codec-chain-item:hover {
+	box-shadow: 0 4px 12px var(--codec-shadow);
+	transform: translateX(2px);
+}
+
+.codec-chain-item-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 4px;
+}
+
+.codec-chain-item-header span:first-child {
+	font-weight: 500;
+	color: var(--codec-text-primary);
+	font-size: 13px;
+}
+
+.codec-remove-operation {
+	background: none;
+	border: none;
+	color: var(--codec-error);
+	cursor: pointer;
+	font-size: 18px;
+	padding: 0;
+	line-height: 1;
+	opacity: 0.7;
+	transition: opacity 0.2s;
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.codec-remove-operation:hover {
+	opacity: 1;
+}
+
+.codec-button-container {
+	display: flex;
+	gap: 8px;
+	padding: 16px;
+	background: var(--codec-bg-secondary);
+	border-top: 1px solid var(--codec-border);
+}
+
+.codec-execute-button {
+	flex: 2;
+	padding: 10px 16px;
+	background: linear-gradient(135deg, var(--codec-primary), var(--codec-secondary));
+	color: white;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 500;
+	font-size: 13px;
+	transition: all 0.2s;
+	box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.codec-execute-button:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+}
+
+.codec-execute-button:active {
+	transform: translateY(0);
+}
+
+.codec-clear-button,
+.codec-save-button {
+	flex: 1;
+	padding: 10px 16px;
+	background: var(--codec-bg-tertiary);
+	border: 1px solid var(--codec-border);
+	border-radius: 8px;
+	cursor: pointer;
+	color: var(--codec-text-primary);
+	font-size: 12px;
+	font-weight: 500;
+	transition: all 0.2s;
+}
+
+.codec-clear-button:hover,
+.codec-save-button:hover {
+	background: var(--codec-bg-primary);
+	border-color: var(--codec-primary);
+}
+
+/* Right panel - Input/Output */
+.codec-right-panel {
+	width: 320px;
+	min-width: 280px;
+	background: var(--codec-bg-secondary);
+	display: flex;
+	flex-direction: column;
+}
+
+.codec-right-panel h3 {
+	margin: 0;
+	padding: 16px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--codec-text-primary);
+	background: var(--codec-bg-tertiary);
+	border-bottom: 1px solid var(--codec-border);
+	letter-spacing: 0.5px;
+}
+
+.codec-input-section,
+.codec-output-section {
+	padding: 16px 16px 0;
+}
+
+.codec-input-section label,
+.codec-output-section label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 500;
+	color: var(--codec-text-secondary);
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.codec-input-area,
+.codec-output-area {
+	width: 100%;
+	height: 150px;
+	padding: 12px;
+	background: var(--codec-bg-primary);
+	border: 1px solid var(--codec-border);
+	border-radius: 8px;
+	color: var(--codec-text-primary);
+	font-family: 'Monaco', 'Courier New', monospace;
+	font-size: 12px;
+	resize: vertical;
+	outline: none;
+	transition: all 0.2s;
+	line-height: 1.4;
+}
+
+.codec-input-area:focus,
+.codec-output-area:focus {
+	border-color: var(--codec-primary);
+	box-shadow: 0 0 0 2px var(--codec-glow);
+}
+
+.codec-output-area {
+	background: var(--codec-bg-tertiary);
+	resize: none;
+}
+
+.codec-result-buttons {
+	display: flex;
+	gap: 8px;
+	padding: 16px;
+}
+
+.codec-copy-button,
+.codec-replace-button {
+	flex: 1;
+	padding: 8px 12px;
+	background: var(--codec-bg-tertiary);
+	border: 1px solid var(--codec-border);
+	border-radius: 6px;
+	cursor: pointer;
+	color: var(--codec-text-primary);
+	font-size: 11px;
+	font-weight: 500;
+	transition: all 0.2s;
+}
+
+.codec-copy-button:hover,
+.codec-replace-button:hover {
+	background: var(--codec-bg-primary);
+	border-color: var(--codec-primary);
+}
+
+/* Status indicators */
+.codec-status {
+	padding: 8px 16px;
+	margin: 8px 16px 0;
+	background: var(--codec-bg-tertiary);
+	border-radius: 6px;
+	font-size: 12px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.codec-status.success {
+	background: rgba(16, 185, 129, 0.1);
+	color: var(--codec-success);
+	border: 1px solid var(--codec-success);
+}
+
+.codec-status.error {
+	background: rgba(239, 68, 68, 0.1);
+	color: var(--codec-error);
+	border: 1px solid var(--codec-error);
+}
+
+/* Animations */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.codec-operation-card,
+.codec-chain-item {
+	animation: fadeIn 0.3s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+	.codec-layout {
+		flex-direction: column;
+	}
+	
+	.codec-left-panel,
+	.codec-right-panel {
+		width: 100%;
+		min-width: 100%;
+		max-height: 300px;
+	}
+	
+	.codec-middle-panel {
+		min-height: 400px;
+	}
+}
