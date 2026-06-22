@@ -17,7 +17,7 @@ export default class CodecPlugin extends Plugin {
 
 		registerAllOperations();
 
-		this.registerView(VIEW_TYPE, (leaf) => new CodecView(leaf as WorkspaceLeaf, this));
+		this.registerView(VIEW_TYPE, (leaf) => new CodecView(leaf, this));
 
 		this.addRibbonIcon('settings', '打开 Codec', (evt: MouseEvent) => {
 			void this.activateView();
@@ -89,23 +89,21 @@ export default class CodecPlugin extends Plugin {
 	}
 
 	async activateView() {
-		const workspace = this.app.workspace as Workspace;
+		const workspace = this.app.workspace;
 
-		let leaf: WorkspaceLeaf | null = null;
+		let leaf: WorkspaceLeaf;
 		const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE);
 
 		if (existingLeaves.length > 0) {
-			leaf = existingLeaves[0];
+			leaf = existingLeaves[0] as WorkspaceLeaf;
 		} else {
 			// 使用 'tab' 模式在当前视图创建新标签页，而不是分割视图
 			leaf = workspace.getLeaf('tab');
 		}
 
-		if (leaf) {
-			await leaf.setViewState({ type: VIEW_TYPE, active: true });
-		}
+		await leaf.setViewState({ type: VIEW_TYPE, active: true });
 
-		workspace.revealLeaf(leaf);
+		await workspace.revealLeaf(leaf);
 	}
 
 	get globalRegistry() {
@@ -162,9 +160,10 @@ export default class CodecPlugin extends Plugin {
 	}
 
 	replaceSelectedText(text: string): void {
-		const activeView = this.app.workspace.getActiveViewOfType<any>();
-		if (activeView && activeView.editor) {
-			activeView.editor.replaceSelection(text);
+		const activeView = this.app.workspace.getActiveViewOfType(CodecView);
+		const editor = (activeView as unknown as { editor?: { replaceSelection: (text: string) => void } } | null)?.editor;
+		if (editor) {
+			editor.replaceSelection(text);
 			new Notice('文本已替换');
 		} else {
 			new Notice('没有活动的编辑器');
@@ -178,11 +177,15 @@ export default class CodecPlugin extends Plugin {
 
 		const existingIndex = this.data.savedChains.findIndex(c => c.name === name);
 		if (existingIndex >= 0) {
+			const existingChain = this.data.savedChains[existingIndex];
+			if (!existingChain) {
+				return;
+			}
 			this.data.savedChains[existingIndex] = {
-				id: this.data.savedChains[existingIndex].id,
+				id: existingChain.id,
 				name,
 				operations: chain,
-				createdAt: this.data.savedChains[existingIndex].createdAt,
+				createdAt: existingChain.createdAt,
 				lastUsed: Date.now()
 			};
 		} else {
@@ -195,9 +198,7 @@ export default class CodecPlugin extends Plugin {
 			});
 		}
 
-		if (chain.lastUsed) {
-			void this.saveData(this.data);
-		}
+		void this.saveData(this.data);
 	}
 
 	loadOperationChain(chainId: string): OperationConfig[] | null {

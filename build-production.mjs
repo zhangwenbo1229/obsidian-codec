@@ -29,7 +29,7 @@ await esbuild.build({
 		'node:*',
 	],
 	format: 'cjs',
-	target: 'es2021',
+	target: 'es2017',
 	logLevel: 'info',
 	sourcemap: false,
 	treeShaking: true,

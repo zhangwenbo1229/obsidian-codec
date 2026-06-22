@@ -18,6 +18,11 @@ const filesToCopy = [
 console.log('🔧 开始复制插件文件到 Obsidian 目录...');
 
 try {
+	if (fs.existsSync(targetDir)) {
+		fs.rmSync(targetDir, { recursive: true, force: true });
+	}
+	fs.mkdirSync(targetDir, { recursive: true });
+
 	filesToCopy.forEach(file => {
 		const sourcePath = path.join(sourceDir, file);
 		const targetPath = path.join(targetDir, file);

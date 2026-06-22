@@ -1,5 +1,6 @@
 import { Operation, OperationCategory } from './operations/interfaces';
 import type { OperationRegistry } from './operations/interfaces';
+export type { OperationRegistry } from './operations/interfaces';
 import { ValidationResult } from './types';
 
 export class InMemoryOperationRegistry implements OperationRegistry {

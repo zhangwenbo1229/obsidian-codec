@@ -80,7 +80,34 @@ describe('完整操作链功能测试', () => {
 	it('应该列出所有注册的操作', () => {
 		const operations = globalRegistry.listAll();
 		
-		expect(operations.length).toBe(15); // 6编码对 + JWT + 4哈希
+		expect(operations.length).toBe(57);
+		expect(operations.map(operation => operation.id)).toEqual(expect.arrayContaining([
+			'binary-encode',
+			'binary-decode',
+			'decimal-encode',
+			'decimal-decode',
+			'extract-strings',
+			'extract-line-count',
+			'extract-ipv4',
+			'extract-url',
+			'extract-domain',
+			'remove-protocol',
+			'remove-port',
+			'extract-root-domain',
+			'expand-cidr',
+			'add-line-affix',
+			'convert-ip-format',
+			'javascript-prettify',
+			'javascript-minify',
+			'xml-minify',
+			'upper-case',
+			'lower-case',
+			'swap-case',
+			'remove-whitespace',
+			'line-to-symbol',
+			'join-to-single-line',
+			'auto-wrap'
+		]));
 	});
 
 	it('应该能按分类查找操作', () => {

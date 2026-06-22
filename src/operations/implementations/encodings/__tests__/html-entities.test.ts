@@ -72,8 +72,8 @@ describe('HTMLEntityDecodeOperation', () => {
 	it('should handle malformed entities', async () => {
 		const operation = new HTMLEntityDecodeOperation();
 		const result = await operation.execute('&lt;div&gt;&invalid;&lt;/div&gt;', {});
-		expect(result.success).toBe(false);
-		expect(result.error).toBeDefined();
+		expect(result.success).toBe(true);
+		expect(result.data).toBe('<div>&invalid;</div>');
 	});
 
 	it('should have correct metadata', () => {

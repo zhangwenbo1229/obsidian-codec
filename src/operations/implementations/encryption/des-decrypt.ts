@@ -1,5 +1,5 @@
 import { BaseOperation } from '../../base-operation';
-import { OperationCategory, OperationResult } from '../../../types';
+import { OperationCategory, ValidationResult } from '../../../types';
 import * as CryptoJS from 'crypto-js';
 import {
     parseInputByKeyFormat,
@@ -25,7 +25,7 @@ export class DESDecryptOperation extends BaseOperation {
     description = '使用DES算法对数据进行解密';
 
     protected async executeLogic(input: string, config: Record<string, unknown>): Promise<string> {
-        const desConfig = config as DESDecryptConfig;
+        const desConfig = config as unknown as DESDecryptConfig;
 
         if (!desConfig.key || desConfig.key.trim() === '') {
             throw new Error('请输入密钥(Key)');
@@ -43,7 +43,7 @@ export class DESDecryptOperation extends BaseOperation {
 
         const ciphertext = parseInputByKeyFormat(input, desConfig.inputFormat || 'hex');
 
-        const options: CryptoJS.enc.CipherOption = {
+        const options: Parameters<typeof CryptoJS.DES.decrypt>[2] = {
             mode: desConfig.mode === 'CBC' ? CryptoJS.mode.CBC : CryptoJS.mode.ECB,
             padding: desConfig.padding === 'PKCS7' ? CryptoJS.pad.Pkcs7 : CryptoJS.pad.ZeroPadding
         };
@@ -53,7 +53,7 @@ export class DESDecryptOperation extends BaseOperation {
         }
 
         const decrypted = CryptoJS.DES.decrypt(
-            { ciphertext: ciphertext },
+            CryptoJS.lib.CipherParams.create({ ciphertext }),
             parsedKey,
             options
         );

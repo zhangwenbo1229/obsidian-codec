@@ -23,7 +23,7 @@ async function build() {
 				...builtinModules,
 			],
 			format: 'cjs',
-			target: 'es2021',
+			target: 'es2017',
 			logLevel: 'info',
 			sourcemap: false,
 			treeShaking: true,

@@ -1,5 +1,5 @@
 import { BaseOperation } from '../../base-operation';
-import { OperationCategory, OperationResult } from '../../../types';
+import { OperationCategory, ValidationResult } from '../../../types';
 import * as CryptoJS from 'crypto-js';
 import {
     parseInputByKeyFormat,
@@ -26,7 +26,7 @@ export class TripleDESEncryptOperation extends BaseOperation {
     description = '使用3DES(Triple DES)算法对数据进行加密';
 
     protected async executeLogic(input: string, config: Record<string, unknown>): Promise<string> {
-        const desConfig = config as TripleDESEncryptConfig;
+        const desConfig = config as unknown as TripleDESEncryptConfig;
 
         if (!desConfig.key || desConfig.key.trim() === '') {
             throw new Error('请输入密钥(Key)');
@@ -42,7 +42,7 @@ export class TripleDESEncryptOperation extends BaseOperation {
             parsedIV = parseInputByIVFormat(desConfig.iv, desConfig.ivFormat || 'raw');
         }
 
-        const options: CryptoJS.enc.CipherOption = {
+        const options: Parameters<typeof CryptoJS.TripleDES.encrypt>[2] = {
             mode: desConfig.mode === 'CBC' ? CryptoJS.mode.CBC : CryptoJS.mode.ECB,
             padding: desConfig.padding === 'PKCS7' ? CryptoJS.pad.Pkcs7 : CryptoJS.pad.ZeroPadding
         };

@@ -30,14 +30,17 @@ export class SaveChainModal extends Modal {
 
 		const nameInput = inputContainer.createEl('input', {
 			type: 'text',
+			cls: 'codec-save-chain-name-input',
 			attr: { 
-				style: 'width: 100%; padding: 8px 12px; border: 1px solid var(--background-modifier-border); border-radius: 4px; font-size: 14px;',
+				style: 'width: 100%; padding: 8px 12px; border: 1px solid var(--background-modifier-border); border-radius: 4px; font-size: 14px; pointer-events: auto; user-select: text;',
 				placeholder: '请输入操作链名称...'
 			}
 		});
 
 		// 聚焦输入框
-		setTimeout(() => nameInput.focus(), 100);
+		activeWindow.setTimeout(() => nameInput.focus(), 100);
+		nameInput.addEventListener('mousedown', (e) => e.stopPropagation());
+		nameInput.addEventListener('click', (e) => e.stopPropagation());
 
 		const buttonContainer = form.createEl('div', {
 			attr: { style: 'display: flex; gap: 12px; justify-content: flex-end;' }
@@ -54,7 +57,7 @@ export class SaveChainModal extends Modal {
 		});
 
 		cancelButton.addEventListener('click', () => this.close());
-		saveButton.addEventListener('click', () => {
+		saveButton.addEventListener('click', async () => {
 			const name = nameInput.value.trim();
 			if (!name) {
 				new Notice('请输入操作链名称');
@@ -62,8 +65,19 @@ export class SaveChainModal extends Modal {
 			}
 
 			// 保存操作链逻辑
-			this.codecView.saveOperationChainWithName(name);
-			this.close();
+			saveButton.disabled = true;
+			try {
+				const saved = await this.codecView.saveOperationChainWithName(name);
+				if (saved) {
+					this.close();
+					activeWindow.setTimeout(() => this.close(), 0);
+				} else {
+					saveButton.disabled = false;
+				}
+			} catch (error) {
+				saveButton.disabled = false;
+				new Notice(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
+			}
 		});
 
 		// 支持回车键保存
@@ -76,5 +90,10 @@ export class SaveChainModal extends Modal {
 
 	onClose(): void {
 		// 清理工作
+	}
+
+	close(): void {
+		super.close();
+		this.containerEl.closest('.modal-container')?.remove();
 	}
 }

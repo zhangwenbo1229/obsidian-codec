@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Notice, Modal, InputModal, setIcon } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, setIcon } from 'obsidian';
 import { VIEW_TYPE } from './constants';
 import CodecPlugin from './main';
 import { SaveChainModal } from './modal/save-chain-modal';
@@ -10,12 +10,15 @@ export class CodecView extends ItemView {
 	private inputArea!: HTMLTextAreaElement;
 	private outputArea!: HTMLTextAreaElement;
 	private immediateExecutionCheckbox: HTMLInputElement | null = null;
+	private statsUpdateInterval: number | null = null;
 	
 	// 状态管理相关属性
 	private chainStateManager?: ChainStateManager;
 	private itemControllers: Map<string, OperationChainItemController> = new Map();
 	private currentBreakpointIndex: number = -1;
 	private isBreakpointMode: boolean = false;
+	private historyMenuCloseHandler: ((e: MouseEvent) => void) | null = null;
+	private historyMenuCloseTimer: number | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: CodecPlugin) {
 		super(leaf);
@@ -40,7 +43,11 @@ export class CodecView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
-		// 清理资源
+		this.closeHistoryMenu();
+		if (this.statsUpdateInterval !== null) {
+			window.clearInterval(this.statsUpdateInterval);
+			this.statsUpdateInterval = null;
+		}
 	}
 
 	private render(): void {
@@ -54,7 +61,7 @@ export class CodecView extends ItemView {
 	private renderThreePanelLayout(container: HTMLElement): void {
 		const layout = container.createDiv({
 			cls: 'codec-container codec-layout',
-			attr: { style: 'display: flex; height: 100%; gap: var(--codec-space-md); padding: var(--codec-space-lg);' }
+			attr: { style: 'display: flex; height: 100%; gap: var(--codec-space-md); padding: var(--codec-space-lg); --codec-operation-library-height: calc(100vh - 260px); --codec-chain-panel-height: calc(100vh - 300px); --codec-io-panel-height: calc(100vh - 170px);' }
 		});
 
 		const leftPanel = layout.createDiv({
@@ -87,7 +94,7 @@ export class CodecView extends ItemView {
 
 		const operationList = panel.createEl('div', {
 			cls: 'codec-operation-list',
-			attr: { style: 'margin-top: 10px; height: calc(100vh - 250px); overflow-y: auto; position: relative; z-index: 1;' }
+			attr: { style: 'margin-top: 10px; max-height: calc(100vh - 260px) !important; overflow-y: auto; position: relative; z-index: 1;' }
 		});
 
 		this.renderOperationsList(operationList);
@@ -106,6 +113,9 @@ export class CodecView extends ItemView {
 			encryption: operations.filter(op => op.category === 'encryption'),
 			decryption: operations.filter(op => op.category === 'decryption'),
 			beautify: operations.filter(op => op.category === 'beautify'),
+			dataFormat: operations.filter(op => op.category === 'data-format'),
+			extractAnalysis: operations.filter(op => op.category === 'extract-analysis'),
+			urlIp: operations.filter(op => op.category === 'url-ip'),
 			datetime: operations.filter(op => op.category === 'datetime')
 		};
 
@@ -115,6 +125,9 @@ export class CodecView extends ItemView {
 		this.renderOperationCategory(container, '加密', groupedOps.encryption);
 		this.renderOperationCategory(container, '解密', groupedOps.decryption);
 		this.renderOperationCategory(container, '数据美化', groupedOps.beautify);
+		this.renderOperationCategory(container, '数据格式', groupedOps.dataFormat);
+		this.renderOperationCategory(container, '提取分析', groupedOps.extractAnalysis);
+		this.renderOperationCategory(container, 'URL/IP', groupedOps.urlIp);
 		this.renderOperationCategory(container, '时间日期', groupedOps.datetime);
 		
 		// 重新绑定拖拽事件
@@ -229,6 +242,11 @@ export class CodecView extends ItemView {
 			}
 		});
 		setIcon(historyButton, 'clock');
+		historyButton.addEventListener('mouseenter', () => {
+			if (!this.containerEl.querySelector('.codec-history-menu')) {
+				this.showChainHistory();
+			}
+		});
 		historyButton.addEventListener('click', () => this.showChainHistory());
 
 		// 清空操作链按钮
@@ -241,7 +259,7 @@ export class CodecView extends ItemView {
 		const chainContainer = panel.createEl('div', {
 			cls: 'codec-chain-container',
 			attr: { 
-				style: 'height: calc(100vh - 300px); overflow-y: auto; border: 2px dashed var(--background-modifier-border); border-radius: 8px; padding: 17px; background: var(--background-secondary);',
+				style: 'height: var(--codec-chain-panel-height); overflow-y: auto; border: 2px dashed var(--background-modifier-border); border-radius: 8px; padding: 17px; background: var(--background-primary);',
 				'data-chain-container': 'true'
 			}
 		});
@@ -329,11 +347,11 @@ export class CodecView extends ItemView {
 		// 添加flex布局以支持自适应高度
 		panel.style.display = 'flex';
 		panel.style.flexDirection = 'column';
-		panel.style.height = '100%';
+		panel.style.height = 'calc(100vh - 170px)';
 
 		const inputSection = panel.createEl('div', {
 			cls: 'codec-input-section',
-			attr: { style: 'margin-bottom: 15px; flex: 1; display: flex; flex-direction: column;' }
+			attr: { style: 'margin-bottom: 15px; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column;' }
 		});
 
 		const inputHeader = inputSection.createEl('div', {
@@ -346,6 +364,12 @@ export class CodecView extends ItemView {
 			attr: { style: 'display: block; font-weight: 500; margin: 0;' }
 		});
 
+		const inputStats = inputHeader.createEl('span', {
+			cls: 'codec-input-stats',
+			attr: { style: 'font-size: 11px; color: var(--text-muted); font-weight: 400; margin-right: auto; margin-left: 8px;' },
+			text: '0B 0字符 0行'
+		});
+
 		const clearInputButton = inputHeader.createEl('span', {
 			cls: 'codec-clear-input-btn',
 			attr: { style: 'color: red; cursor: pointer; font-size: 13px; font-weight: 500; user-select: none;' },
@@ -355,7 +379,7 @@ export class CodecView extends ItemView {
 		const inputArea = inputSection.createEl('textarea', {
 			cls: 'codec-input-area',
 			attr: { 
-				style: 'width: 100%; flex: 1; min-height: 110px; padding: 8px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 4px; resize: none; font-family: monospace;',
+				style: 'width: 100%; flex: 1 1 0; min-height: 0 !important; padding: 8px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 4px; resize: none; font-family: monospace;',
 				placeholder: '输入要处理的文本...'
 			}
 		});
@@ -367,12 +391,13 @@ export class CodecView extends ItemView {
 		
 		// 添加输入变化监听器
 		inputArea.addEventListener('input', () => {
+			this.updateTextStats(inputArea, inputStats);
 			this.checkImmediateExecution();
 		});
 
 		const outputSection = panel.createEl('div', {
 			cls: 'codec-output-section',
-			attr: { style: 'margin-bottom: 15px; flex: 1; display: flex; flex-direction: column;' }
+			attr: { style: 'margin-bottom: 0; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column;' }
 		});
 
 		const outputHeader = outputSection.createEl('div', {
@@ -383,6 +408,12 @@ export class CodecView extends ItemView {
 		outputHeader.createEl('label', { 
 			text: '输出:',
 			attr: { style: 'display: block; font-weight: 500; margin: 0;' }
+		});
+
+		const outputStats = outputHeader.createEl('span', {
+			cls: 'codec-output-stats',
+			attr: { style: 'font-size: 11px; color: var(--text-muted); font-weight: 400; margin-right: auto; margin-left: 8px;' },
+			text: '0B 0字符 0行'
 		});
 
 		const outputToolbar = outputHeader.createEl('div', {
@@ -408,9 +439,11 @@ export class CodecView extends ItemView {
 		const outputArea = outputSection.createEl('textarea', {
 			cls: 'codec-output-area',
 			attr: { 
-				style: 'width: 100%; flex: 1; min-height: 110px; padding: 8px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 4px; resize: none; font-family: monospace; readonly: true;'
+				style: 'width: 100%; flex: 1 1 0; min-height: 0 !important; padding: 8px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 4px; resize: none; font-family: monospace; readonly: true;'
 			}
 		});
+
+		this.setupTextStatsUpdater(inputArea, inputStats, outputArea, outputStats);
 
 		saveButton.addEventListener('click', () => this.saveOutputToFile(outputArea));
 		replaceButton.addEventListener('click', () => {
@@ -504,13 +537,11 @@ export class CodecView extends ItemView {
 	private setupButtonHandlers(): void {
 		const executeButton = this.containerEl.querySelector('.codec-execute-button');
 		const clearButton = this.containerEl.querySelector('.codec-clear-button');
-		const saveButton = this.containerEl.querySelector('.codec-save-button');
 		const copyButton = this.containerEl.querySelector('.codec-copy-button');
 		const replaceButton = this.containerEl.querySelector('.codec-replace-button');
 
 		executeButton?.addEventListener('click', () => this.executeOperationChain());
 		clearButton?.addEventListener('click', () => this.clearOperationChain());
-		saveButton?.addEventListener('click', () => this.showSaveChainModal());
 		copyButton?.addEventListener('click', () => this.copyResult());
 		replaceButton?.addEventListener('click', () => this.replaceSelectedText());
 	}
@@ -528,6 +559,37 @@ export class CodecView extends ItemView {
 			const category = (e.target as HTMLSelectElement).value;
 			this.filterOperations(searchBox?.value || '', category);
 		});
+	}
+
+	private updateTextStats(textArea: HTMLTextAreaElement, statsElement?: HTMLElement | null): void {
+		if (!statsElement) {
+			return;
+		}
+
+		const text = textArea.value;
+		const bytes = new TextEncoder().encode(text).length;
+		const chars = Array.from(text).length;
+		const lines = text.length === 0 ? 0 : text.split(/\r\n|\r|\n/).length;
+		statsElement.textContent = `${bytes}B ${chars}字符 ${lines}行`;
+	}
+
+	private setupTextStatsUpdater(
+		inputArea: HTMLTextAreaElement,
+		inputStats: HTMLElement,
+		outputArea: HTMLTextAreaElement,
+		outputStats: HTMLElement
+	): void {
+		this.updateTextStats(inputArea, inputStats);
+		this.updateTextStats(outputArea, outputStats);
+
+		if (this.statsUpdateInterval !== null) {
+			window.clearInterval(this.statsUpdateInterval);
+		}
+
+		this.statsUpdateInterval = window.setInterval(() => {
+			this.updateTextStats(inputArea, inputStats);
+			this.updateTextStats(outputArea, outputStats);
+		}, 300);
 	}
 
 	private filterOperations(query: string, category: string): void {
@@ -657,6 +719,7 @@ export class CodecView extends ItemView {
 			});
 
 			const charsets = [
+				{ value: 'ascii', text: 'ASCII' },
 				{ value: 'gb-18030', text: 'GB 18030 (简体中文)' },
 				{ value: 'windows-1252', text: 'Windows-1252 (西欧)' },
 				{ value: 'iso-8859-1', text: 'ISO-8859-1 (西欧)' },
@@ -710,6 +773,7 @@ export class CodecView extends ItemView {
 			});
 
 			const charsets = [
+				{ value: 'ascii', text: 'ASCII' },
 				{ value: 'gb-18030', text: 'GB 18030 (简体中文)' },
 				{ value: 'windows-1252', text: 'Windows-1252 (西欧)' },
 				{ value: 'iso-8859-1', text: 'ISO-8859-1 (西欧)' },
@@ -736,6 +800,207 @@ export class CodecView extends ItemView {
 				const newConfig = { ...parsedConfig, targetCharset: target.value };
 				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
 			});
+		}
+
+		if (operation.id === 'find-replace') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			const findInput = configContainer.createEl('input', {
+				type: 'text',
+				cls: 'codec-find-input',
+				attr: {
+					placeholder: '查找内容',
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);'
+				}
+			});
+			findInput.value = config.find as string || '';
+
+			const replaceInput = configContainer.createEl('input', {
+				type: 'text',
+				cls: 'codec-replace-input',
+				attr: {
+					placeholder: '替换为',
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);'
+				}
+			});
+			replaceInput.value = config.replaceWith as string || '';
+
+			const updateConfig = () => {
+				const existingConfig = chainItem.getAttribute('data-config');
+				const parsedConfig = existingConfig ? JSON.parse(existingConfig) : {};
+				const newConfig = {
+					...parsedConfig,
+					find: findInput.value,
+					replaceWith: replaceInput.value
+				};
+				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
+			};
+
+			findInput.addEventListener('input', updateConfig);
+			replaceInput.addEventListener('input', updateConfig);
+			updateConfig();
+		}
+
+		if (operation.id === 'add-line-affix') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			const positionContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 10px; align-items: center; font-size: 11px;' }
+			});
+
+			const startLabel = positionContainer.createEl('label', {
+				attr: { style: 'display: flex; gap: 4px; align-items: center; cursor: pointer;' }
+			});
+			const startRadio = startLabel.createEl('input', {
+				type: 'radio',
+				attr: { name: `affix-position-${Date.now()}-${Math.random()}`, value: 'start' }
+			});
+			startLabel.createSpan({ text: '行首' });
+
+			const endLabel = positionContainer.createEl('label', {
+				attr: { style: 'display: flex; gap: 4px; align-items: center; cursor: pointer;' }
+			});
+			const endRadio = endLabel.createEl('input', {
+				type: 'radio',
+				attr: { name: startRadio.name, value: 'end' }
+			});
+			endLabel.createSpan({ text: '行尾' });
+
+			const textInput = configContainer.createEl('input', {
+				type: 'text',
+				cls: 'codec-affix-text-input',
+				attr: {
+					placeholder: '添加内容',
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-primary); color: var(--text-normal);'
+				}
+			});
+
+			const dedupeLabel = configContainer.createEl('label', {
+				attr: { style: 'display: flex; gap: 6px; align-items: center; font-size: 11px; cursor: pointer;' }
+			});
+			const dedupeCheckbox = dedupeLabel.createEl('input', { type: 'checkbox' });
+			dedupeLabel.createSpan({ text: '是否去重' });
+
+			startRadio.checked = (config.position ?? 'start') !== 'end';
+			endRadio.checked = config.position === 'end';
+			textInput.value = config.text as string || '';
+			dedupeCheckbox.checked = Boolean(config.deduplicate);
+
+			const updateConfig = () => {
+				const existingConfig = chainItem.getAttribute('data-config');
+				const parsedConfig = existingConfig ? JSON.parse(existingConfig) : {};
+				chainItem.setAttribute('data-config', JSON.stringify({
+					...parsedConfig,
+					position: endRadio.checked ? 'end' : 'start',
+					text: textInput.value,
+					deduplicate: dedupeCheckbox.checked
+				}));
+			};
+
+			startRadio.addEventListener('change', updateConfig);
+			endRadio.addEventListener('change', updateConfig);
+			textInput.addEventListener('input', updateConfig);
+			dedupeCheckbox.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
+		if (operation.id === 'line-to-symbol') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			const symbolInput = configContainer.createEl('input', {
+				type: 'text',
+				cls: 'codec-line-symbol-input',
+				attr: {
+					placeholder: '替换符号',
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-primary); color: var(--text-normal);'
+				}
+			});
+			symbolInput.value = config.symbol as string || ',';
+
+			const updateConfig = () => {
+				const existingConfig = chainItem.getAttribute('data-config');
+				const parsedConfig = existingConfig ? JSON.parse(existingConfig) : {};
+				chainItem.setAttribute('data-config', JSON.stringify({
+					...parsedConfig,
+					symbol: symbolInput.value
+				}));
+			};
+
+			symbolInput.addEventListener('input', updateConfig);
+			updateConfig();
+		}
+
+		if (operation.id === 'convert-ip-format') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const formats = [
+				{ value: 'dotted', text: '点分十进制' },
+				{ value: 'decimal', text: '十进制' },
+				{ value: 'hex', text: '十六进制' },
+				{ value: 'octal', text: '八进制' }
+			];
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			const inputLabel = configContainer.createEl('label', {
+				text: '输入格式',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+			const inputFormatSelector = configContainer.createEl('select', {
+				cls: 'codec-ip-input-format',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-primary); color: var(--text-normal);' }
+			});
+
+			const outputLabel = configContainer.createEl('label', {
+				text: '输出格式',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+			const outputFormatSelector = configContainer.createEl('select', {
+				cls: 'codec-ip-output-format',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-primary); color: var(--text-normal);' }
+			});
+
+			for (const format of formats) {
+				const inputOption = inputFormatSelector.createEl('option', { value: format.value, text: format.text });
+				if (format.value === (config.inputFormat || 'dotted')) {
+					inputOption.selected = true;
+				}
+				const outputOption = outputFormatSelector.createEl('option', { value: format.value, text: format.text });
+				if (format.value === (config.outputFormat || 'decimal')) {
+					outputOption.selected = true;
+				}
+			}
+
+			const updateConfig = () => {
+				const existingConfig = chainItem.getAttribute('data-config');
+				const parsedConfig = existingConfig ? JSON.parse(existingConfig) : {};
+				chainItem.setAttribute('data-config', JSON.stringify({
+					...parsedConfig,
+					inputFormat: inputFormatSelector.value,
+					outputFormat: outputFormatSelector.value
+				}));
+			};
+
+			inputFormatSelector.addEventListener('change', updateConfig);
+			outputFormatSelector.addEventListener('change', updateConfig);
+			updateConfig();
 		}
 
 		if (operation.id === 'url-encode') {
@@ -1816,7 +2081,7 @@ export class CodecView extends ItemView {
 			});
 
 			[12, 16].forEach(length => {
-				const option = nonceLengthSelector.createEl('option', { value: length, text: `${length}字节` });
+				const option = nonceLengthSelector.createEl('option', { value: String(length), text: `${length}字节` });
 				if (length === (encryptConfig.nonceLength || 12)) {
 					option.selected = true;
 				}
@@ -1983,7 +2248,7 @@ export class CodecView extends ItemView {
 			});
 
 			[12, 16].forEach(length => {
-				const option = nonceLengthSelector.createEl('option', { value: length, text: `${length}字节` });
+				const option = nonceLengthSelector.createEl('option', { value: String(length), text: `${length}字节` });
 				if (length === (decryptConfig.nonceLength || 12)) {
 					option.selected = true;
 				}
@@ -2258,15 +2523,14 @@ export class CodecView extends ItemView {
 		chainItem.draggable = true;
 
 		chainItem.addEventListener('dragstart', (e) => {
-			const dragEvent = e as DragEvent;
-			dragEvent.dataTransfer!.effectAllowed = 'move';
-			dragEvent.dataTransfer!.setData('text/plain', operationId);
+			e.dataTransfer!.effectAllowed = 'move';
+			e.dataTransfer!.setData('text/plain', operationId);
 			
 			// 记录被拖拽项的原始位置
 			const chainContainer = this.containerEl.querySelector('[data-chain-container]') as HTMLElement;
 			const allItems = Array.from(chainContainer.querySelectorAll('.codec-chain-item'));
 			const originalIndex = allItems.indexOf(chainItem);
-			dragEvent.dataTransfer!.setData('original-index', originalIndex.toString());
+			e.dataTransfer!.setData('original-index', originalIndex.toString());
 			
 			// 添加拖拽样式
 			chainItem.addClass('codec-dragging');
@@ -2291,13 +2555,12 @@ export class CodecView extends ItemView {
 			e.preventDefault();
 			e.stopPropagation();
 			
-			const dragEvent = e as DragEvent;
-			dragEvent.dataTransfer!.dropEffect = 'move';
+			e.dataTransfer!.dropEffect = 'move';
 			
 			const chainContainer = this.containerEl.querySelector('[data-chain-container]') as HTMLElement;
 			const allItems = Array.from(chainContainer.querySelectorAll('.codec-chain-item'));
 			const targetIndex = allItems.indexOf(chainItem);
-			const draggedIndex = parseInt(dragEvent.dataTransfer!.getData('original-index') || '0');
+			const draggedIndex = parseInt(e.dataTransfer!.getData('original-index') || '0');
 			
 			if (targetIndex !== draggedIndex) {
 				// 移除其他项的拖拽悬停样式
@@ -2321,12 +2584,11 @@ export class CodecView extends ItemView {
 			e.preventDefault();
 			e.stopPropagation();
 			
-			const dragEvent = e as DragEvent;
 			const chainContainer = this.containerEl.querySelector('[data-chain-container]') as HTMLElement;
 			const allItems = Array.from(chainContainer.querySelectorAll('.codec-chain-item'));
 			
-			const draggedOperationId = dragEvent.dataTransfer!.getData('text/plain');
-			const originalIndex = parseInt(dragEvent.dataTransfer!.getData('original-index') || '0');
+			const draggedOperationId = e.dataTransfer!.getData('text/plain');
+			const originalIndex = parseInt(e.dataTransfer!.getData('original-index') || '0');
 			const targetIndex = allItems.indexOf(chainItem);
 			
 			if (draggedOperationId === operationId || targetIndex === originalIndex) {
@@ -2355,6 +2617,9 @@ export class CodecView extends ItemView {
 		}
 		
 		const [movedItem] = allItems.splice(fromIndex, 1);
+		if (!movedItem) {
+			return;
+		}
 		allItems.splice(toIndex, 0, movedItem);
 		
 		// 重新插入DOM元素
@@ -2534,9 +2799,10 @@ export class CodecView extends ItemView {
 		// 移除现有菜单
 		const existingMenu = this.containerEl.querySelector('.codec-history-menu');
 		if (existingMenu) {
-			existingMenu.remove();
+			this.closeHistoryMenu();
 			return;
 		}
+		this.closeHistoryMenu();
 
 		const menu = historyButton.createEl('div', {
 			cls: 'codec-history-menu',
@@ -2556,17 +2822,17 @@ export class CodecView extends ItemView {
 				const item = menu.createEl('div', {
 					cls: 'history-item',
 					attr: { 
-						style: 'padding: 12px; cursor: pointer; border-bottom: 1px solid var(--background-modifier-border); display: flex; justify-content: space-between; align-items: center;'
+						style: 'padding: 12px; cursor: pointer; border-bottom: 1px solid var(--background-modifier-border); display: flex; justify-content: space-between; align-items: center; gap: 8px;'
 					}
 				});
 
 				const itemInfo = item.createEl('div', {
-					attr: { style: 'flex: 1;' }
+					attr: { style: 'flex: 1; min-width: 0;' }
 				});
 				
 				itemInfo.createEl('div', {
 					text: chain.name,
-					attr: { style: 'font-weight: 500; margin-bottom: 4px;' }
+					attr: { style: 'font-weight: 500; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;' }
 				});
 				
 				itemInfo.createEl('div', {
@@ -2574,9 +2840,46 @@ export class CodecView extends ItemView {
 					attr: { style: 'font-size: 12px; color: var(--text-muted);' }
 				});
 
+				const actionContainer = item.createEl('div', {
+					cls: 'history-item-actions',
+					attr: { style: 'display: flex; gap: 4px; flex: 0 0 auto;' }
+				});
+
+				const editButton = actionContainer.createEl('button', {
+					cls: 'toolbar-button history-edit-button',
+					attr: {
+						'aria-label': '重命名历史记录',
+						'title': '重命名',
+						'style': 'width: 24px; height: 24px; padding: 2px;'
+					}
+				});
+				setIcon(editButton, 'pencil');
+
+				const deleteButton = actionContainer.createEl('button', {
+					cls: 'toolbar-button history-delete-button',
+					attr: {
+						'aria-label': '删除历史记录',
+						'title': '删除',
+						'style': 'width: 24px; height: 24px; padding: 2px; color: var(--text-error);'
+					}
+				});
+				setIcon(deleteButton, 'trash-2');
+
+				editButton.addEventListener('click', (event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					this.renameSavedChain(chain.id);
+				});
+
+				deleteButton.addEventListener('click', (event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					this.deleteSavedChain(chain.id);
+				});
+
 				item.addEventListener('click', () => {
 					this.loadSavedChain(chain);
-					menu.remove();
+					this.closeHistoryMenu();
 				});
 
 				item.addEventListener('mouseenter', () => {
@@ -2592,11 +2895,76 @@ export class CodecView extends ItemView {
 		// 点击外部关闭菜单
 		const closeMenu = (e: MouseEvent) => {
 			if (!menu.contains(e.target as Node)) {
-				menu.remove();
-				document.removeEventListener('click', closeMenu);
+				this.closeHistoryMenu();
 			}
 		};
-		setTimeout(() => document.addEventListener('click', closeMenu), 100);
+		this.historyMenuCloseHandler = closeMenu;
+		this.historyMenuCloseTimer = window.setTimeout(() => {
+			document.addEventListener('click', closeMenu);
+			this.historyMenuCloseTimer = null;
+		}, 100);
+	}
+
+	private closeHistoryMenu(): void {
+		const existingMenu = this.containerEl.querySelector('.codec-history-menu');
+		if (existingMenu) {
+			existingMenu.remove();
+		}
+		if (this.historyMenuCloseTimer !== null) {
+			window.clearTimeout(this.historyMenuCloseTimer);
+			this.historyMenuCloseTimer = null;
+		}
+		if (this.historyMenuCloseHandler) {
+			document.removeEventListener('click', this.historyMenuCloseHandler);
+			this.historyMenuCloseHandler = null;
+		}
+	}
+
+	private async renameSavedChain(chainId: string): Promise<void> {
+		const savedChains = this.plugin.data?.savedChains || [];
+		const chain = savedChains.find((item: any) => item.id === chainId);
+		if (!chain) {
+			new Notice('未找到历史记录');
+			return;
+		}
+
+		const newName = window.prompt('请输入新的历史记录名称', chain.name)?.trim();
+		if (!newName || newName === chain.name) {
+			return;
+		}
+
+		const duplicate = savedChains.some((item: any) => item.id !== chainId && item.name === newName);
+		if (duplicate) {
+			new Notice('历史记录名称已存在');
+			return;
+		}
+
+		chain.name = newName;
+		chain.lastUsed = Date.now();
+		await this.plugin.saveData(this.plugin.data);
+		new Notice(`历史记录已重命名为: ${newName}`);
+		this.closeHistoryMenu();
+		this.showChainHistory();
+	}
+
+	private async deleteSavedChain(chainId: string): Promise<void> {
+		const savedChains = this.plugin.data?.savedChains || [];
+		const chain = savedChains.find((item: any) => item.id === chainId);
+		if (!chain) {
+			new Notice('未找到历史记录');
+			return;
+		}
+
+		const confirmed = window.confirm(`确定要删除历史记录 "${chain.name}" 吗？`);
+		if (!confirmed) {
+			return;
+		}
+
+		this.plugin.data.savedChains = savedChains.filter((item: any) => item.id !== chainId);
+		await this.plugin.saveData(this.plugin.data);
+		new Notice(`历史记录 "${chain.name}" 已删除`);
+		this.closeHistoryMenu();
+		this.showChainHistory();
 	}
 
 	// 加载已保存的操作链
@@ -2629,13 +2997,13 @@ export class CodecView extends ItemView {
 	}
 
 	// 保存操作链到数据存储
-	public saveOperationChainWithName(name: string): void {
+	public async saveOperationChainWithName(name: string): Promise<boolean> {
 		const chainContainer = this.containerEl.querySelector('[data-chain-container]') as HTMLElement;
 		const chainItems = chainContainer.querySelectorAll('.codec-chain-item');
 
 		if (chainItems.length === 0) {
 			new Notice('没有操作链可保存');
-			return;
+			return false;
 		}
 
 		const operations = Array.from(chainItems).map(item => {
@@ -2654,7 +3022,7 @@ export class CodecView extends ItemView {
 			const confirm = window.confirm(`操作链 "${name}" 已存在，是否覆盖？`);
 			if (!confirm) {
 				new Notice('保存已取消');
-				return;
+				return false;
 			}
 			// 更新现有操作链
 			const existingChain = savedChains[existingIndex];
@@ -2679,8 +3047,9 @@ export class CodecView extends ItemView {
 		}
 
 		this.plugin.data.savedChains = savedChains;
-		void this.plugin.saveData(this.plugin.data);
+		await this.plugin.saveData(this.plugin.data);
 		new Notice(`操作链 "${name}" 已保存`);
+		return true;
 	}
 
 	private copyResult(): void {

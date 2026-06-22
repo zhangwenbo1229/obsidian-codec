@@ -5,6 +5,9 @@ export enum OperationCategory {
 	ENCRYPTION = 'encryption',
 	DECRYPTION = 'decryption',
 	BEAUTIFY = 'beautify',
+	DATA_FORMAT = 'data-format',
+	EXTRACT_ANALYSIS = 'extract-analysis',
+	URL_IP = 'url-ip',
 	CUSTOM = 'custom',
 	DATETIME = 'datetime'
 }

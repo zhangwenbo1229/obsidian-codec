@@ -1,7 +1,7 @@
-import { parseInputByKeyFormatForWebCrypto, parseInputByIVFormatForWebCrypto } from '../operations/implementations/encryption/format-utils';
+import { InputFormat, parseInputByKeyFormatForWebCrypto } from '../operations/implementations/encryption/format-utils';
 
 export class WebCryptoAdapter {
-	static async importKey(format: string, keyData: string): Promise<CryptoKey> {
+	static async importKey(format: InputFormat, keyData: string): Promise<CryptoKey> {
 		const keyDataBytes = parseInputByKeyFormatForWebCrypto(keyData, format);
 		return await crypto.subtle.importKey(
 			'raw',
