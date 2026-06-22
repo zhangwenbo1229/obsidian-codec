@@ -24,7 +24,7 @@ export class DateToTimestampOperation extends BaseOperation {
 
 	protected async executeLogic(input: string, config: Record<string, unknown>): Promise<string> {
 		const trimmed = input.trim();
-		const operationConfig = config as DateToTimestampConfig;
+		const operationConfig = config as unknown as Partial<DateToTimestampConfig>;
 		
 		let date: Date;
 		
@@ -34,10 +34,14 @@ export class DateToTimestampOperation extends BaseOperation {
 		else if (/^\d{4}年\d{1,2}月\d{1,2}日/.test(trimmed) || /^\d{4}-\d{1,2}-\d{1,2}/.test(trimmed)) {
 			const match = trimmed.match(/(\d{4})[年-](\d{1,2})[月-](\d{1,2})/);
 			if (match) {
-				const [, year, month, day] = match;
+				const year = match[1] || '0';
+				const month = match[2] || '1';
+				const day = match[3] || '1';
 				const timeMatch = trimmed.match(/(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
 				if (timeMatch) {
-					const [, hours, minutes, seconds] = timeMatch;
+					const hours = timeMatch[1] || '0';
+					const minutes = timeMatch[2] || '0';
+					const seconds = timeMatch[3] || '0';
 					date = new Date(
 						parseInt(year), 
 						parseInt(month) - 1, 

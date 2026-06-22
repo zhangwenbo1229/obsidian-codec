@@ -7,6 +7,7 @@ export const OPERATION_CATEGORIES = {
 	[OperationCategory.ENCRYPTION]: '加密',
 	[OperationCategory.DECRYPTION]: '解密',
 	[OperationCategory.BEAUTIFY]: '数据美化',
+	[OperationCategory.DATA_FORMAT]: '数据格式',
 	[OperationCategory.CUSTOM]: '自定义',
 	[OperationCategory.DATETIME]: '时间日期'
 };

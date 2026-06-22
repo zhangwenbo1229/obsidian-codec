@@ -41,7 +41,7 @@ export class TimestampToDateOperation extends BaseOperation {
 
 	protected async executeLogic(input: string, config: Record<string, unknown>): Promise<string> {
 		const timestamp = input.trim();
-		const operationConfig = config as TimestampToDateConfig;
+		const operationConfig = config as unknown as Partial<TimestampToDateConfig>;
 		
 		const milliseconds = timestamp.length === 10 
 			? parseInt(timestamp, 10) * 1000 

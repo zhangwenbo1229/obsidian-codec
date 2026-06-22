@@ -20,7 +20,7 @@ export class AESEncryptOperation extends BaseOperation {
 	description = '使用AES算法对数据进行加密';
 
 	protected async executeLogic(input: string, config: Record<string, unknown>): Promise<string> {
-		const aesConfig = config as AESEncryptConfig;
+		const aesConfig = config as unknown as AESEncryptConfig;
 
 		if (!aesConfig.key || aesConfig.key.trim() === '') {
 			throw new Error('请输入密钥(Key)');
@@ -36,7 +36,7 @@ export class AESEncryptOperation extends BaseOperation {
 			parsedIV = parseInputByIVFormat(aesConfig.iv, aesConfig.ivFormat || 'raw');
 		}
 
-		const options: CryptoJS.CipherOption = {
+		const options: Parameters<typeof CryptoJS.AES.encrypt>[2] = {
 			mode: this.getAESMode(aesConfig.mode),
 			padding: aesConfig.padding === 'PKCS7' ? CryptoJS.pad.Pkcs7 : CryptoJS.pad.ZeroPadding
 		};

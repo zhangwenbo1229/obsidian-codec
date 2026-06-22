@@ -3,11 +3,11 @@ import { OperationCategory } from '../../../types';
 import { ValidationResult } from '../../../types';
 
 export interface ToUtf8Config {
-	sourceCharset: 'gb-18030' | 'windows-1252' | 'iso-8859-1' | 'big5' | 'utf-16';
+	sourceCharset: 'ascii' | 'gb-18030' | 'windows-1252' | 'iso-8859-1' | 'big5' | 'utf-16';
 }
 
 export interface FromUtf8Config {
-	targetCharset: 'gb-18030' | 'windows-1252' | 'iso-8859-1' | 'big5' | 'utf-16';
+	targetCharset: 'ascii' | 'gb-18030' | 'windows-1252' | 'iso-8859-1' | 'big5' | 'utf-16';
 }
 
 export class ToUtf8Operation extends BaseOperation {
@@ -24,7 +24,7 @@ export class ToUtf8Operation extends BaseOperation {
 	}
 
 	protected async executeLogic(input: string, config: Record<string, unknown>): Promise<string> {
-		const operationConfig = config as ToUtf8Config;
+		const operationConfig = config as unknown as Partial<ToUtf8Config>;
 		const sourceCharset = operationConfig.sourceCharset || 'gb-18030';
 		
 		try {
@@ -36,6 +36,8 @@ export class ToUtf8Operation extends BaseOperation {
 
 	private convertToUtf8(input: string, sourceCharset: string): string {
 		switch (sourceCharset) {
+			case 'ascii':
+				return this.fromAsciiToUtf8(input);
 			case 'utf-16':
 				return this.fromUtf16ToUtf8(input);
 			case 'iso-8859-1':
@@ -47,6 +49,15 @@ export class ToUtf8Operation extends BaseOperation {
 			default:
 				return input;
 		}
+	}
+
+	private fromAsciiToUtf8(input: string): string {
+		let result = '';
+		for (let i = 0; i < input.length; i++) {
+			const charCode = input.charCodeAt(i);
+			result += charCode <= 0x7F ? String.fromCharCode(charCode) : '?';
+		}
+		return result;
 	}
 
 	private fromUtf16ToUtf8(input: string): string {
@@ -96,6 +107,7 @@ export class ToUtf8Operation extends BaseOperation {
 			<div class="codec-config-section">
 				<label class="codec-config-label">源字符集：</label>
 				<select class="codec-charset-selector" data-config-key="sourceCharset">
+					<option value="ascii">ASCII</option>
 					<option value="gb-18030">GB 18030 (简体中文)</option>
 					<option value="windows-1252">Windows-1252 (西欧)</option>
 					<option value="iso-8859-1">ISO-8859-1 (西欧)</option>
@@ -126,7 +138,7 @@ export class FromUtf8Operation extends BaseOperation {
 	}
 
 	protected async executeLogic(input: string, config: Record<string, unknown>): Promise<string> {
-		const operationConfig = config as FromUtf8Config;
+		const operationConfig = config as unknown as Partial<FromUtf8Config>;
 		const targetCharset = operationConfig.targetCharset || 'gb-18030';
 		
 		try {
@@ -138,6 +150,8 @@ export class FromUtf8Operation extends BaseOperation {
 
 	private convertFromUtf8(input: string, targetCharset: string): string {
 		switch (targetCharset) {
+			case 'ascii':
+				return this.toAscii(input);
 			case 'utf-16':
 				return this.toUtf16(input);
 			case 'iso-8859-1':
@@ -149,6 +163,15 @@ export class FromUtf8Operation extends BaseOperation {
 			default:
 				return input;
 		}
+	}
+
+	private toAscii(input: string): string {
+		let result = '';
+		for (let i = 0; i < input.length; i++) {
+			const charCode = input.charCodeAt(i);
+			result += charCode <= 0x7F ? input[i] : '?';
+		}
+		return result;
 	}
 
 	private toUtf16(input: string): string {
@@ -192,6 +215,7 @@ export class FromUtf8Operation extends BaseOperation {
 			<div class="codec-config-section">
 				<label class="codec-config-label">目标字符集：</label>
 				<select class="codec-charset-selector" data-config-key="targetCharset">
+					<option value="ascii">ASCII</option>
 					<option value="gb-18030">GB 18030 (简体中文)</option>
 					<option value="windows-1252">Windows-1252 (西欧)</option>
 					<option value="iso-8859-1">ISO-8859-1 (西欧)</option>

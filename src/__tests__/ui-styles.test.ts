@@ -32,6 +32,7 @@ describe('Codec视图样式测试', () => {
 			</html>
 		`);
 		document = dom.window.document;
+		globalThis.HTMLElement = dom.window.HTMLElement;
 	});
 
 	afterEach(() => {
@@ -87,7 +88,7 @@ describe('Codec视图样式测试', () => {
 			const executionContainer = document.querySelector('.codec-execution-container') as HTMLElement;
 			const style = executionContainer.style;
 			
-			expect(style.margin).toBe('12px 0');
+			expect(style.margin).toBe('12px 0px');
 		});
 
 		it('执行按钮容器应该有正确的padding', () => {
@@ -102,7 +103,7 @@ describe('Codec视图样式测试', () => {
 			const style = executionContainer.style;
 			
 			expect(style.position).toBe('sticky');
-			expect(style.bottom).toBe('0');
+			expect(style.bottom).toBe('0px');
 		});
 
 		it('执行按钮容器应该有正确的z-index', () => {
@@ -156,7 +157,7 @@ describe('Codec视图样式测试', () => {
 
 		it('占位符应该显示正确的文本', () => {
 			const placeholder = document.querySelector('[data-placeholder="true"]') as HTMLElement;
-			expect(placeholder.textContent).toBe('拖拽操作到此区域构建操作链');
+			expect(placeholder.textContent?.trim()).toBe('拖拽操作到此区域构建操作链');
 		});
 
 		it('占位符应该有正确的样式', () => {

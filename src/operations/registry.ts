@@ -11,6 +11,12 @@ import {
 	HexEncodeOperation, 
 	HexDecodeOperation 
 } from './implementations/encodings/hex';
+import {
+	BinaryEncodeOperation,
+	BinaryDecodeOperation,
+	DecimalEncodeOperation,
+	DecimalDecodeOperation
+} from './implementations/encodings/numeric';
 import { 
 	HTMLEntityEncodeOperation, 
 	HTMLEntityDecodeOperation 
@@ -44,6 +50,11 @@ import {
 import { 
 	XmlPrettifyOperation 
 } from './implementations/beautify/xml-prettify';
+import {
+	JavaScriptPrettifyOperation,
+	JavaScriptMinifyOperation
+} from './implementations/beautify/javascript';
+import { XmlMinifyOperation } from './implementations/beautify/xml-minify';
 import { 
 	DESEncryptOperation 
 } from './implementations/encryption/des-encrypt';
@@ -58,14 +69,49 @@ import { AESGCMEncryptOperation } from './implementations/encryption/aes-gcm-enc
 import { AESGCMDecryptOperation } from './implementations/encryption/aes-gcm-decrypt';
 import { TimestampToDateOperation } from './implementations/datetime/timestamp-to-date';
 import { DateToTimestampOperation } from './implementations/datetime/date-to-timestamp';
+import {
+	FindReplaceOperation,
+	DeduplicateOperation,
+	SortLinesOperation,
+	AddLineAffixOperation,
+	UpperCaseOperation,
+	LowerCaseOperation,
+	SwapCaseOperation,
+	RemoveWhitespaceOperation,
+	LineToSymbolOperation,
+	JoinToSingleLineOperation,
+	AutoWrapOperation
+} from './implementations/data-format/text-tools';
+import {
+	ExtractStringOperation,
+	ExtractLineCountOperation,
+	ExtractIPv4Operation,
+	ExtractUrlOperation,
+	ExtractDomainOperation
+} from './implementations/extract-analysis/extract-tools';
+import {
+	RemoveProtocolOperation,
+	RemovePortOperation,
+	ExtractRootDomainOperation,
+	ExpandCidrOperation,
+	ConvertIpFormatOperation
+} from './implementations/url-ip/url-ip-tools';
 
 export function registerAllOperations(): void {
+	if (globalRegistry.listAll().length > 0) {
+		return;
+	}
+
 	globalRegistry.register(new Base64EncodeOperation());
 	globalRegistry.register(new Base64DecodeOperation());
 	globalRegistry.register(new URLEncodeOperation());
 	globalRegistry.register(new URLDecodeOperation());
 	globalRegistry.register(new HexEncodeOperation());
 	globalRegistry.register(new HexDecodeOperation());
+	globalRegistry.register(new BinaryEncodeOperation());
+	globalRegistry.register(new BinaryDecodeOperation());
+	globalRegistry.register(new DecimalEncodeOperation());
+	globalRegistry.register(new DecimalDecodeOperation());
 	globalRegistry.register(new HTMLEntityEncodeOperation());
 	globalRegistry.register(new HTMLEntityDecodeOperation());
 	globalRegistry.register(new UnicodeEncodeOperation());
@@ -77,6 +123,9 @@ export function registerAllOperations(): void {
 	globalRegistry.register(new SHA512Operation());
 	globalRegistry.register(new JsonPrettifyOperation());
 	globalRegistry.register(new XmlPrettifyOperation());
+	globalRegistry.register(new JavaScriptPrettifyOperation());
+	globalRegistry.register(new JavaScriptMinifyOperation());
+	globalRegistry.register(new XmlMinifyOperation());
 	globalRegistry.register(new DESEncryptOperation());
 	globalRegistry.register(new DESDecryptOperation());
 	globalRegistry.register(new TripleDESEncryptOperation());
@@ -89,4 +138,25 @@ export function registerAllOperations(): void {
 	globalRegistry.register(new DateToTimestampOperation());
 	globalRegistry.register(new ToUtf8Operation());
 	globalRegistry.register(new FromUtf8Operation());
+	globalRegistry.register(new FindReplaceOperation());
+	globalRegistry.register(new DeduplicateOperation());
+	globalRegistry.register(new SortLinesOperation());
+	globalRegistry.register(new AddLineAffixOperation());
+	globalRegistry.register(new UpperCaseOperation());
+	globalRegistry.register(new LowerCaseOperation());
+	globalRegistry.register(new SwapCaseOperation());
+	globalRegistry.register(new RemoveWhitespaceOperation());
+	globalRegistry.register(new LineToSymbolOperation());
+	globalRegistry.register(new JoinToSingleLineOperation());
+	globalRegistry.register(new AutoWrapOperation());
+	globalRegistry.register(new ExtractStringOperation());
+	globalRegistry.register(new ExtractLineCountOperation());
+	globalRegistry.register(new ExtractIPv4Operation());
+	globalRegistry.register(new ExtractUrlOperation());
+	globalRegistry.register(new ExtractDomainOperation());
+	globalRegistry.register(new RemoveProtocolOperation());
+	globalRegistry.register(new RemovePortOperation());
+	globalRegistry.register(new ExtractRootDomainOperation());
+	globalRegistry.register(new ExpandCidrOperation());
+	globalRegistry.register(new ConvertIpFormatOperation());
 }

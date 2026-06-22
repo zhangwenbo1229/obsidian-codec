@@ -19,7 +19,7 @@ export class AESGCMDecryptOperation extends BaseOperation {
 	description = '使用AES-GCM认证加密算法对数据进行解密';
 
 	protected async executeLogic(input: string, config: Record<string, unknown>): Promise<string> {
-		const gcmConfig = config as AESGCMDecryptConfig;
+		const gcmConfig = config as unknown as AESGCMDecryptConfig;
 
 		if (!gcmConfig.key || gcmConfig.key.trim() === '') {
 			throw new Error('请输入密钥(Key)');

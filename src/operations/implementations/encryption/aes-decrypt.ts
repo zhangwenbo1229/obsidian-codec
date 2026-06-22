@@ -20,7 +20,7 @@ export class AESDecryptOperation extends BaseOperation {
 	description = '使用AES算法对数据进行解密';
 
 	protected async executeLogic(input: string, config: Record<string, unknown>): Promise<string> {
-		const aesConfig = config as AESDecryptConfig;
+		const aesConfig = config as unknown as AESDecryptConfig;
 
 		if (!aesConfig.key || aesConfig.key.trim() === '') {
 			throw new Error('请输入密钥(Key)');
@@ -38,7 +38,7 @@ export class AESDecryptOperation extends BaseOperation {
 
 		const ciphertext = parseInputByKeyFormat(input, aesConfig.inputFormat || 'hex');
 
-		const options: CryptoJS.CipherOption = {
+		const options: Parameters<typeof CryptoJS.AES.decrypt>[2] = {
 			mode: this.getAESMode(aesConfig.mode),
 			padding: aesConfig.padding === 'PKCS7' ? CryptoJS.pad.Pkcs7 : CryptoJS.pad.ZeroPadding
 		};
@@ -48,7 +48,7 @@ export class AESDecryptOperation extends BaseOperation {
 		}
 
 		const decrypted = CryptoJS.AES.decrypt(
-			{ ciphertext: ciphertext },
+			CryptoJS.lib.CipherParams.create({ ciphertext }),
 			parsedKey,
 			options
 		);
