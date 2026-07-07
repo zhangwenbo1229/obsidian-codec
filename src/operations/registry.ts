@@ -29,6 +29,9 @@ import {
 	JWTDecodeOperation 
 } from './implementations/encodings/jwt';
 import { 
+	JWTSignOperation 
+} from './implementations/encodings/jwt-sign';
+import { 
 	ToUtf8Operation, 
 	FromUtf8Operation 
 } from './implementations/encodings/charset-converter';
@@ -117,6 +120,7 @@ export function registerAllOperations(): void {
 	globalRegistry.register(new UnicodeEncodeOperation());
 	globalRegistry.register(new UnicodeDecodeOperation());
 	globalRegistry.register(new JWTDecodeOperation());
+	globalRegistry.register(new JWTSignOperation());
 	globalRegistry.register(new MD5Operation());
 	globalRegistry.register(new SHA1Operation());
 	globalRegistry.register(new SHA256Operation());

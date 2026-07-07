@@ -29,30 +29,24 @@ export class JWTDecodeOperation extends BaseOperation {
 			const parts = input.split('.');
 			const [headerB64, payloadB64] = parts;
 			
-			let header: Record<string, unknown>;
-			let payload: Record<string, unknown>;
+			let decodedHeader: string;
+			let decodedPayload: string;
 			
 			try {
-				const headerStr = atob(this.base64UrlDecode(headerB64 || ''));
-				header = JSON.parse(headerStr);
+				decodedHeader = atob(this.base64UrlDecode(headerB64 || ''));
 			} catch (error) {
 				throw new Error('JWT 头部解析失败：无效的 Base64URL 格式');
 			}
 			
 			try {
-				const payloadStr = atob(this.base64UrlDecode(payloadB64 || ''));
-				payload = JSON.parse(payloadStr);
+				decodedPayload = atob(this.base64UrlDecode(payloadB64 || ''));
 			} catch (error) {
 				throw new Error('JWT 载荷解析失败：无效的 Base64URL 格式');
 			}
 			
-			const result = {
-				header,
-				payload,
-				signature: parts[2]
-			};
+			const result = `${decodedHeader}.${decodedPayload}.${parts[2] || ''}`;
 			
-			return JSON.stringify(result, null, 2);
+			return result;
 		} catch (error) {
 			throw new Error(`JWT 解析失败: ${error instanceof Error ? error.message : '未知错误'}`);
 		}

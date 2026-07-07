@@ -2439,6 +2439,110 @@ export class CodecView extends ItemView {
 			});
 		}
 
+		// 为JWT签名操作添加配置UI
+		if (['jwt-sign'].includes(operation.id)) {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentAlgorithm = config.algorithm as string || 'HS256';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 算法选择容器
+			const algorithmContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const algorithmLabel = algorithmContainer.createEl('label', {
+				text: '签名算法:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const algorithmSelector = algorithmContainer.createEl('select', {
+				cls: 'codec-algorithm-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			const algorithms = [
+				{ value: 'ES256', text: 'ES256' },
+				{ value: 'ES384', text: 'ES384' },
+				{ value: 'ES512', text: 'ES512' },
+				{ value: 'HS256', text: 'HS256' },
+				{ value: 'HS384', text: 'HS384' },
+				{ value: 'HS512', text: 'HS512' },
+				{ value: 'PS256', text: 'PS256' },
+				{ value: 'PS384', text: 'PS384' },
+				{ value: 'PS512', text: 'PS512' },
+				{ value: 'RS256', text: 'RS256' },
+				{ value: 'RS384', text: 'RS384' },
+				{ value: 'RS512', text: 'RS512' },
+				{ value: 'None', text: 'None' }
+			];
+
+			algorithms.forEach(algo => {
+				const option = algorithmSelector.createEl('option', { value: algo.value, text: algo.text });
+				if (algo.value === currentAlgorithm) {
+					option.selected = true;
+				}
+			});
+
+			// 密钥输入容器
+			const keyContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyLabel = keyContainer.createEl('label', {
+				text: 'JWT 密钥:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyInput = keyContainer.createEl('input', {
+				type: 'text',
+				cls: 'codec-jwt-key-input',
+				attr: {
+					style: 'width: 100%; font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);',
+					placeholder: '输入 JWT 密钥'
+				}
+			});
+			keyInput.value = config.secretKey as string || '';
+
+			// Base64 编码勾选框
+			const base64CheckboxContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; align-items: center; gap: 6px;' }
+			});
+
+			const base64Checkbox = base64CheckboxContainer.createEl('input', {
+				type: 'checkbox',
+				attr: {
+					style: 'cursor: pointer; width: 14px; height: 14px;'
+				}
+			});
+
+			const base64CheckboxLabel = base64CheckboxContainer.createEl('label', {
+				text: 'Base64 编码',
+				attr: { style: 'font-size: 11px; color: var(--text-muted); cursor: pointer;' }
+			});
+
+			base64Checkbox.checked = Boolean(config.base64Encoded);
+
+			const updateConfig = () => {
+				const existingConfig = chainItem.getAttribute('data-config');
+				const parsedConfig = existingConfig ? JSON.parse(existingConfig) : {};
+				chainItem.setAttribute('data-config', JSON.stringify({
+					...parsedConfig,
+					algorithm: algorithmSelector.value,
+					secretKey: keyInput.value,
+					base64Encoded: base64Checkbox.checked
+				}));
+			};
+
+			algorithmSelector.addEventListener('change', updateConfig);
+			keyInput.addEventListener('input', updateConfig);
+			base64Checkbox.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
 		// 创建控制按钮容器
 		const buttonsContainer = content.createEl('div', {
 			cls: 'state-control-buttons',
