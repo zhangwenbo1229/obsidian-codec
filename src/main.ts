@@ -5,6 +5,7 @@ import { globalRegistry } from './operation-registry';
 import { registerAllOperations } from './operations/registry';
 import { VIEW_TYPE, DEFAULT_PLUGIN_STATE } from './constants';
 import type { PluginState, OperationConfig } from './types';
+import { CodecSettingTab } from './settings';
 
 export default class CodecPlugin extends Plugin {
 	data: PluginState = DEFAULT_PLUGIN_STATE;
@@ -82,6 +83,9 @@ export default class CodecPlugin extends Plugin {
 				}
 			},
 		});
+
+		// 注册设置选项卡
+		this.addSettingTab(new CodecSettingTab(this.app, this));
 	}
 
 	onunload() {
@@ -213,5 +217,100 @@ export default class CodecPlugin extends Plugin {
 
 	getSavedChains(): any[] {
 		return this.data.savedChains || [];
+	}
+
+	// 获取系统可用字体
+	async getSystemFonts(): Promise<string[]> {
+		try {
+			// 创建一个临时的测试元素来检测字体
+			const testFonts = [
+				// 常用中文字体
+				'Microsoft YaHei', 'SimSun', 'SimHei', 'KaiTi', 'FangSong', 'STSong', 'STKaiti', 'STXihei',
+				// 常用英文字体
+				'Arial', 'Arial Black', 'Arial Narrow', 'Calibri', 'Cambria', 'Cambria Math',
+				'Consolas', 'Courier', 'Courier New', 'Georgia', 'Helvetica', 'Impact',
+				'Lucida Console', 'Microsoft Sans Serif', 'Palatino Linotype', 'Segoe UI',
+				'Tahoma', 'Times', 'Times New Roman', 'Trebuchet MS', 'Verdana',
+				// 等宽字体
+				'Fira Code', 'JetBrains Mono', 'Source Code Pro', 'Monaco', 'Menlo',
+				// 其他
+				'Roboto', 'Open Sans', 'Ubuntu', 'Noto Sans'
+			];
+
+			// 基础字体用于检测
+			const baseFonts = ['monospace', 'sans-serif', 'serif'];
+			
+			// 创建测试元素
+			const testElement = document.createElement('span');
+			testElement.style.position = 'absolute';
+			testElement.style.visibility = 'hidden';
+			testElement.style.fontSize = '72px';
+			testElement.textContent = 'mmmmmmmmmmlli';
+			document.body.appendChild(testElement);
+
+			// 获取基础字体的宽度
+			const baseWidths: Record<string, number> = {};
+			baseFonts.forEach(font => {
+				testElement.style.fontFamily = font;
+				baseWidths[font] = testElement.offsetWidth;
+			});
+
+			// 检测每个字体是否可用
+			const availableFonts: string[] = [];
+			testFonts.forEach(font => {
+				let detected = false;
+				baseFonts.forEach(base => {
+					testElement.style.fontFamily = `'${font}', ${base}`;
+					if (testElement.offsetWidth !== baseWidths[base]) {
+						detected = true;
+					}
+				});
+				if (detected) {
+					availableFonts.push(font);
+				}
+			});
+
+			// 清理测试元素
+			document.body.removeChild(testElement);
+
+			// 添加通用字体家族
+			availableFonts.unshift('monospace', 'sans-serif', 'serif');
+
+			// 排序并去重
+			return [...new Set(availableFonts)].sort();
+		} catch (error) {
+			console.error('获取系统字体失败:', error);
+			// 返回默认字体列表
+			return ['monospace', 'sans-serif', 'serif', 'Arial', 'Consolas', 'Courier New', 'Georgia', 'Tahoma', 'Times New Roman', 'Verdana'];
+		}
+	}
+
+	async updateFontConfig(key: string, value: string): Promise<void> {
+		if (!this.data.preferences.fontConfig) {
+			this.data.preferences.fontConfig = {};
+		}
+		(this.data.preferences.fontConfig as Record<string, string>)[key] = value;
+		await this.saveData(this.data);
+		
+		// 更新视图中的字体样式
+		const activeView = this.app.workspace.getActiveViewOfType(CodecView);
+		if (activeView) {
+			activeView.applyFontConfig();
+		}
+	}
+
+	async resetFontConfig(): Promise<void> {
+		this.data.preferences.fontConfig = {};
+		await this.saveData(this.data);
+		
+		// 更新视图中的字体样式
+		const activeView = this.app.workspace.getActiveViewOfType(CodecView);
+		if (activeView) {
+			activeView.applyFontConfig();
+		}
+	}
+
+	getState(): any {
+		return this.data;
 	}
 }

@@ -48,11 +48,41 @@ import {
 	SHA512Operation 
 } from './implementations/hashes/sha512';
 import { 
+	SM3Operation 
+} from './implementations/hashes/sm3';
+import { 
+	RandomNumberOperation 
+} from './implementations/other/random-number';
+import { 
+	UUIDGenerateOperation 
+} from './implementations/other/uuid-generate';
+import { 
+	RandomStringOperation 
+} from './implementations/other/random-string';
+import { 
+	TimestampGenerateOperation 
+} from './implementations/datetime/timestamp-generate';
+import { 
 	JsonPrettifyOperation 
 } from './implementations/beautify/json-prettify';
 import { 
 	XmlPrettifyOperation 
 } from './implementations/beautify/xml-prettify';
+import { 
+	PHPPrettifyOperation 
+} from './implementations/beautify/php-prettify';
+import { 
+	SQLPrettifyOperation 
+} from './implementations/beautify/sql-prettify';
+import { 
+	JavaPrettifyOperation 
+} from './implementations/beautify/java-prettify';
+import { 
+	PythonPrettifyOperation 
+} from './implementations/beautify/python-prettify';
+import { 
+	ShellPrettifyOperation 
+} from './implementations/beautify/shell-prettify';
 import {
 	JavaScriptPrettifyOperation,
 	JavaScriptMinifyOperation
@@ -99,6 +129,15 @@ import {
 	ExpandCidrOperation,
 	ConvertIpFormatOperation
 } from './implementations/url-ip/url-ip-tools';
+import {
+	CMACOperation
+} from './implementations/mac/cmac';
+import {
+	HMACOperation
+} from './implementations/mac/hmac';
+import {
+	CBCMACOperation
+} from './implementations/mac/cbc-mac';
 
 export function registerAllOperations(): void {
 	if (globalRegistry.listAll().length > 0) {
@@ -125,8 +164,17 @@ export function registerAllOperations(): void {
 	globalRegistry.register(new SHA1Operation());
 	globalRegistry.register(new SHA256Operation());
 	globalRegistry.register(new SHA512Operation());
+	globalRegistry.register(new SM3Operation());
+	globalRegistry.register(new RandomNumberOperation());
+	globalRegistry.register(new UUIDGenerateOperation());
+	globalRegistry.register(new RandomStringOperation());
 	globalRegistry.register(new JsonPrettifyOperation());
 	globalRegistry.register(new XmlPrettifyOperation());
+	globalRegistry.register(new PHPPrettifyOperation());
+	globalRegistry.register(new SQLPrettifyOperation());
+	globalRegistry.register(new JavaPrettifyOperation());
+	globalRegistry.register(new PythonPrettifyOperation());
+	globalRegistry.register(new ShellPrettifyOperation());
 	globalRegistry.register(new JavaScriptPrettifyOperation());
 	globalRegistry.register(new JavaScriptMinifyOperation());
 	globalRegistry.register(new XmlMinifyOperation());
@@ -140,6 +188,7 @@ export function registerAllOperations(): void {
 	globalRegistry.register(new AESGCMDecryptOperation());
 	globalRegistry.register(new TimestampToDateOperation());
 	globalRegistry.register(new DateToTimestampOperation());
+	globalRegistry.register(new TimestampGenerateOperation());
 	globalRegistry.register(new ToUtf8Operation());
 	globalRegistry.register(new FromUtf8Operation());
 	globalRegistry.register(new FindReplaceOperation());
@@ -163,4 +212,7 @@ export function registerAllOperations(): void {
 	globalRegistry.register(new ExtractRootDomainOperation());
 	globalRegistry.register(new ExpandCidrOperation());
 	globalRegistry.register(new ConvertIpFormatOperation());
+	globalRegistry.register(new CMACOperation());
+	globalRegistry.register(new HMACOperation());
+	globalRegistry.register(new CBCMACOperation());
 }

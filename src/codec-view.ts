@@ -56,6 +56,12 @@ export class CodecView extends ItemView {
 		container.empty();
 		
 		this.renderThreePanelLayout(container);
+		
+		// 应用字体配置
+		// 使用 setTimeout 确保 DOM 完全渲染后再应用字体
+		setTimeout(() => {
+			this.applyFontConfig();
+		}, 100);
 	}
 
 	private renderThreePanelLayout(container: HTMLElement): void {
@@ -116,7 +122,9 @@ export class CodecView extends ItemView {
 			dataFormat: operations.filter(op => op.category === 'data-format'),
 			extractAnalysis: operations.filter(op => op.category === 'extract-analysis'),
 			urlIp: operations.filter(op => op.category === 'url-ip'),
-			datetime: operations.filter(op => op.category === 'datetime')
+			datetime: operations.filter(op => op.category === 'datetime'),
+			mac: operations.filter(op => op.category === 'mac'),
+			other: operations.filter(op => op.category === 'other')
 		};
 
 		this.renderOperationCategory(container, '编码', groupedOps.encoding);
@@ -129,6 +137,8 @@ export class CodecView extends ItemView {
 		this.renderOperationCategory(container, '提取分析', groupedOps.extractAnalysis);
 		this.renderOperationCategory(container, 'URL/IP', groupedOps.urlIp);
 		this.renderOperationCategory(container, '时间日期', groupedOps.datetime);
+		this.renderOperationCategory(container, 'MAC', groupedOps.mac);
+		this.renderOperationCategory(container, '其他', groupedOps.other);
 		
 		// 重新绑定拖拽事件
 		this.bindDragEvents();
@@ -368,6 +378,16 @@ export class CodecView extends ItemView {
 			cls: 'codec-input-stats',
 			attr: { style: 'font-size: 11px; color: var(--text-muted); font-weight: 400; margin-right: auto; margin-left: 8px;' },
 			text: '0B 0字符 0行'
+		});
+
+		const importInputButton = inputHeader.createEl('span', {
+			cls: 'codec-import-input-btn',
+			attr: { style: 'color: var(--text-accent); cursor: pointer; font-size: 13px; font-weight: 500; user-select: none; margin-right: 12px;' },
+			text: '导入'
+		});
+
+		importInputButton.addEventListener('click', async () => {
+			await this.importFileToInput();
 		});
 
 		const clearInputButton = inputHeader.createEl('span', {
@@ -2543,6 +2563,872 @@ export class CodecView extends ItemView {
 			updateConfig();
 		}
 
+		// 为 CMAC 操作添加配置 UI
+		if (['cmac'].includes(operation.id)) {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentKey = config.key as string || '';
+			const currentKeyFormat = config.keyFormat as string || 'raw';
+			const currentAlgorithm = config.algorithm as string || 'AES';
+			const currentOutputFormat = config.outputFormat as string || 'hex';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 密钥输入
+			const keyContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyLabel = keyContainer.createEl('label', {
+				text: '密钥:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyInput = keyContainer.createEl('input', {
+				type: 'text',
+				cls: 'codec-key-input',
+				attr: {
+					style: 'width: 100%; font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);',
+					placeholder: '输入密钥'
+				}
+			});
+			keyInput.value = currentKey;
+
+			// 密钥格式选择
+			const keyFormatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyFormatLabel = keyFormatContainer.createEl('label', {
+				text: '密钥格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyFormatSelector = keyFormatContainer.createEl('select', {
+				cls: 'codec-key-format-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			['hex', 'raw', 'base64'].forEach(format => {
+				const option = keyFormatSelector.createEl('option', { value: format, text: format.toUpperCase() });
+				if (format === currentKeyFormat) {
+					option.selected = true;
+				}
+			});
+
+			// 加密算法选择
+			const algorithmContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const algorithmLabel = algorithmContainer.createEl('label', {
+				text: '加密算法:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const algorithmSelector = algorithmContainer.createEl('select', {
+				cls: 'codec-algorithm-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			['AES', 'DES', '3DES', 'SM4'].forEach(algo => {
+				const option = algorithmSelector.createEl('option', { value: algo, text: algo });
+				if (algo === currentAlgorithm) {
+					option.selected = true;
+				}
+			});
+
+			// 输出格式选择
+			const outputFormatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const outputFormatLabel = outputFormatContainer.createEl('label', {
+				text: '输出格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const outputFormatSelector = outputFormatContainer.createEl('select', {
+				cls: 'codec-output-format-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			['hex', 'raw', 'base64'].forEach(format => {
+				const option = outputFormatSelector.createEl('option', { value: format, text: format.toUpperCase() });
+				if (format === currentOutputFormat) {
+					option.selected = true;
+				}
+			});
+
+			const updateConfig = () => {
+				const existingConfig = chainItem.getAttribute('data-config');
+				const parsedConfig = existingConfig ? JSON.parse(existingConfig) : {};
+				chainItem.setAttribute('data-config', JSON.stringify({
+					...parsedConfig,
+					key: keyInput.value,
+					keyFormat: keyFormatSelector.value,
+					algorithm: algorithmSelector.value,
+					outputFormat: outputFormatSelector.value
+				}));
+			};
+
+			keyInput.addEventListener('input', updateConfig);
+			keyFormatSelector.addEventListener('change', updateConfig);
+			algorithmSelector.addEventListener('change', updateConfig);
+			outputFormatSelector.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
+		// 为 HMAC 操作添加配置 UI
+		if (['hmac'].includes(operation.id)) {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentKey = config.key as string || '';
+			const currentKeyFormat = config.keyFormat as string || 'raw';
+			const currentHashMethod = config.hashMethod as string || 'SHA-256';
+			const currentOutputFormat = config.outputFormat as string || 'hex';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 密钥输入
+			const keyContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyLabel = keyContainer.createEl('label', {
+				text: '密钥:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyInput = keyContainer.createEl('input', {
+				type: 'text',
+				cls: 'codec-key-input',
+				attr: {
+					style: 'width: 100%; font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);',
+					placeholder: '输入密钥'
+				}
+			});
+			keyInput.value = currentKey;
+
+			// 密钥格式选择
+			const keyFormatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyFormatLabel = keyFormatContainer.createEl('label', {
+				text: '密钥格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyFormatSelector = keyFormatContainer.createEl('select', {
+				cls: 'codec-key-format-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			['hex', 'raw', 'base64'].forEach(format => {
+				const option = keyFormatSelector.createEl('option', { value: format, text: format.toUpperCase() });
+				if (format === currentKeyFormat) {
+					option.selected = true;
+				}
+			});
+
+			// 哈希方法选择
+			const hashMethodContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const hashMethodLabel = hashMethodContainer.createEl('label', {
+				text: '哈希方法:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const hashMethodSelector = hashMethodContainer.createEl('select', {
+				cls: 'codec-hash-method-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			['SHA-1', 'SHA-256', 'SHA-512', 'MD5', 'SM3'].forEach(method => {
+				const option = hashMethodSelector.createEl('option', { value: method, text: method });
+				if (method === currentHashMethod) {
+					option.selected = true;
+				}
+			});
+
+			// 输出格式选择
+			const outputFormatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const outputFormatLabel = outputFormatContainer.createEl('label', {
+				text: '输出格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const outputFormatSelector = outputFormatContainer.createEl('select', {
+				cls: 'codec-output-format-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			['hex', 'raw', 'base64'].forEach(format => {
+				const option = outputFormatSelector.createEl('option', { value: format, text: format.toUpperCase() });
+				if (format === currentOutputFormat) {
+					option.selected = true;
+				}
+			});
+
+			const updateConfig = () => {
+				const existingConfig = chainItem.getAttribute('data-config');
+				const parsedConfig = existingConfig ? JSON.parse(existingConfig) : {};
+				chainItem.setAttribute('data-config', JSON.stringify({
+					...parsedConfig,
+					key: keyInput.value,
+					keyFormat: keyFormatSelector.value,
+					hashMethod: hashMethodSelector.value,
+					outputFormat: outputFormatSelector.value
+				}));
+			};
+
+			keyInput.addEventListener('input', updateConfig);
+			keyFormatSelector.addEventListener('change', updateConfig);
+			hashMethodSelector.addEventListener('change', updateConfig);
+			outputFormatSelector.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
+		// 为 CBC-MAC 操作添加配置 UI
+		if (['cbc-mac'].includes(operation.id)) {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentKey = config.key as string || '';
+			const currentKeyFormat = config.keyFormat as string || 'raw';
+			const currentAlgorithm = config.algorithm as string || 'AES';
+			const currentOutputFormat = config.outputFormat as string || 'hex';
+			const currentPadding = config.padding as string || 'pkcs';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 密钥输入
+			const keyContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyLabel = keyContainer.createEl('label', {
+				text: '密钥:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyInput = keyContainer.createEl('input', {
+				type: 'text',
+				cls: 'codec-key-input',
+				attr: {
+					style: 'width: 100%; font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);',
+					placeholder: '输入密钥'
+				}
+			});
+			keyInput.value = currentKey;
+
+			// 密钥格式选择
+			const keyFormatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyFormatLabel = keyFormatContainer.createEl('label', {
+				text: '密钥格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyFormatSelector = keyFormatContainer.createEl('select', {
+				cls: 'codec-key-format-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			['hex', 'raw', 'base64'].forEach(format => {
+				const option = keyFormatSelector.createEl('option', { value: format, text: format.toUpperCase() });
+				if (format === currentKeyFormat) {
+					option.selected = true;
+				}
+			});
+
+			// 加密算法选择
+			const algorithmContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const algorithmLabel = algorithmContainer.createEl('label', {
+				text: '加密算法:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const algorithmSelector = algorithmContainer.createEl('select', {
+				cls: 'codec-algorithm-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			['AES', 'DES', 'SM4'].forEach(algo => {
+				const option = algorithmSelector.createEl('option', { value: algo, text: algo });
+				if (algo === currentAlgorithm) {
+					option.selected = true;
+				}
+			});
+
+			// 输出格式选择
+			const outputFormatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const outputFormatLabel = outputFormatContainer.createEl('label', {
+				text: '输出格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const outputFormatSelector = outputFormatContainer.createEl('select', {
+				cls: 'codec-output-format-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			['hex', 'raw', 'base64'].forEach(format => {
+				const option = outputFormatSelector.createEl('option', { value: format, text: format.toUpperCase() });
+				if (format === currentOutputFormat) {
+					option.selected = true;
+				}
+			});
+
+			// 填充方式选择
+			const paddingContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const paddingLabel = paddingContainer.createEl('label', {
+				text: '填充方式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const paddingSelector = paddingContainer.createEl('select', {
+				cls: 'codec-padding-selector',
+				attr: { style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);' }
+			});
+
+			['pkcs', 'zeroPadding'].forEach(padding => {
+				const option = paddingSelector.createEl('option', { value: padding, text: padding });
+				if (padding === currentPadding) {
+					option.selected = true;
+				}
+			});
+
+			const updateConfig = () => {
+				const existingConfig = chainItem.getAttribute('data-config');
+				const parsedConfig = existingConfig ? JSON.parse(existingConfig) : {};
+				chainItem.setAttribute('data-config', JSON.stringify({
+					...parsedConfig,
+					key: keyInput.value,
+					keyFormat: keyFormatSelector.value,
+					algorithm: algorithmSelector.value,
+					outputFormat: outputFormatSelector.value,
+					padding: paddingSelector.value
+				}));
+			};
+
+			keyInput.addEventListener('input', updateConfig);
+			keyFormatSelector.addEventListener('change', updateConfig);
+			algorithmSelector.addEventListener('change', updateConfig);
+			outputFormatSelector.addEventListener('change', updateConfig);
+			paddingSelector.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
+		// 为随机数生成操作添加配置 UI
+		if (operation.id === 'random-number') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentLength = config.length as number || 16;
+			const currentUnit = config.unit as string || 'byte';
+			const currentFormat = config.format as string || 'hex';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 随机数长度配置
+			const lengthContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const lengthLabel = lengthContainer.createEl('label', {
+				text: '随机数长度:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const lengthInput = lengthContainer.createEl('input', {
+				type: 'number',
+				cls: 'random-length-input',
+				attr: {
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);',
+					min: '1',
+					max: '10000',
+					value: currentLength.toString()
+				}
+			});
+
+			// 单位配置
+			const unitContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const unitLabel = unitContainer.createEl('label', {
+				text: '单位:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const unitContainer2 = unitContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px;' }
+			});
+
+			const bitRadio = unitContainer2.createEl('label', {
+				attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+			});
+			const bitRadioInput = bitRadio.createEl('input', {
+				attr: { 
+					type: 'radio',
+					name: 'random-unit',
+					value: 'bit',
+					style: 'cursor: pointer;' 
+				}
+			}) as HTMLInputElement;
+			if (currentUnit === 'bit') {
+				bitRadioInput.checked = true;
+			}
+			bitRadio.createSpan({ text: '位' });
+
+			const charRadio = unitContainer2.createEl('label', {
+				attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+			});
+			const charRadioInput = charRadio.createEl('input', {
+				attr: { 
+					type: 'radio',
+					name: 'random-unit',
+					value: 'char',
+					style: 'cursor: pointer;' 
+				}
+			}) as HTMLInputElement;
+			if (currentUnit === 'char') {
+				charRadioInput.checked = true;
+			}
+			charRadio.createSpan({ text: '字符' });
+
+			const byteRadio = unitContainer2.createEl('label', {
+				attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+			});
+			const byteRadioInput = byteRadio.createEl('input', {
+				attr: { 
+					type: 'radio',
+					name: 'random-unit',
+					value: 'byte',
+					style: 'cursor: pointer;' 
+				}
+			}) as HTMLInputElement;
+			if (currentUnit === 'byte') {
+				byteRadioInput.checked = true;
+			}
+			byteRadio.createSpan({ text: '字节' });
+
+			// 生成格式配置
+			const formatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const formatLabel = formatContainer.createEl('label', {
+				text: '生成格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const formatContainer2 = formatContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px;' }
+			});
+
+			const hexRadio = formatContainer2.createEl('label', {
+				attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+			});
+			const hexRadioInput = hexRadio.createEl('input', {
+				attr: { 
+					type: 'radio',
+					name: 'random-format',
+					value: 'hex',
+					style: 'cursor: pointer;' 
+				}
+			}) as HTMLInputElement;
+			if (currentFormat === 'hex') {
+				hexRadioInput.checked = true;
+			}
+			hexRadio.createSpan({ text: 'HEX' });
+
+			const base64Radio = formatContainer2.createEl('label', {
+				attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+			});
+			const base64RadioInput = base64Radio.createEl('input', {
+				attr: { 
+					type: 'radio',
+					name: 'random-format',
+					value: 'base64',
+					style: 'cursor: pointer;' 
+				}
+			}) as HTMLInputElement;
+			if (currentFormat === 'base64') {
+				base64RadioInput.checked = true;
+			}
+			base64Radio.createSpan({ text: 'Base64' });
+
+			const rawRadio = formatContainer2.createEl('label', {
+				attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+			});
+			const rawRadioInput = rawRadio.createEl('input', {
+				attr: { 
+					type: 'radio',
+					name: 'random-format',
+					value: 'raw',
+					style: 'cursor: pointer;' 
+				}
+			}) as HTMLInputElement;
+			if (currentFormat === 'raw') {
+				rawRadioInput.checked = true;
+			}
+			rawRadio.createSpan({ text: 'RAW' });
+
+			// 配置更新函数
+			const updateConfig = () => {
+				const length = parseInt(lengthInput.value) || 16;
+				
+				let unit = 'byte';
+				const unitInput = unitContainer2.querySelector('input[name="random-unit"]:checked') as HTMLInputElement;
+				if (unitInput) {
+					unit = unitInput.value;
+				}
+
+				let format = 'hex';
+				const formatInput = formatContainer2.querySelector('input[name="random-format"]:checked') as HTMLInputElement;
+				if (formatInput) {
+					format = formatInput.value;
+				}
+
+				const newConfig = { ...config, length, unit, format };
+				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
+			};
+
+			lengthInput.addEventListener('input', updateConfig);
+			unitContainer2.addEventListener('change', updateConfig);
+			formatContainer2.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
+		// 为时间戳生成操作添加配置 UI
+		if (operation.id === 'timestamp-generate') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentUnit = config.unit as string || 'ms';
+			const currentTimezone = config.timezone as string || 'Asia/Shanghai';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 单位配置
+			const unitContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const unitLabel = unitContainer.createEl('label', {
+				text: '单位:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const unitContainer2 = unitContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px;' }
+			});
+
+			const msRadio = unitContainer2.createEl('label', {
+				attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+			});
+			const msRadioInput = msRadio.createEl('input', {
+				attr: { 
+					type: 'radio',
+					name: 'timestamp-unit',
+					value: 'ms',
+					style: 'cursor: pointer;' 
+				}
+			}) as HTMLInputElement;
+			if (currentUnit === 'ms') {
+				msRadioInput.checked = true;
+			}
+			msRadio.createSpan({ text: '毫秒(ms)' });
+
+			const sRadio = unitContainer2.createEl('label', {
+				attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+			});
+			const sRadioInput = sRadio.createEl('input', {
+				attr: { 
+					type: 'radio',
+					name: 'timestamp-unit',
+					value: 's',
+					style: 'cursor: pointer;' 
+				}
+			}) as HTMLInputElement;
+			if (currentUnit === 's') {
+				sRadioInput.checked = true;
+			}
+			sRadio.createSpan({ text: '秒(s)' });
+
+			// 时区配置
+			const timezoneContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const timezoneLabel = timezoneContainer.createEl('label', {
+				text: '时区:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const timezoneContainer2 = timezoneContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 4px; font-size: 11px;' }
+			});
+
+			const timezones = [
+				{ value: 'Asia/Shanghai', text: '北京时间 (UTC+8)' },
+				{ value: 'Asia/Hong_Kong', text: '香港时间 (UTC+8)' },
+				{ value: 'Asia/Taipei', text: '台北时间 (UTC+8)' },
+				{ value: 'Asia/Tokyo', text: '东京时间 (UTC+9)' },
+				{ value: 'Asia/Seoul', text: '首尔时间 (UTC+9)' },
+				{ value: 'Asia/Singapore', text: '新加坡时间 (UTC+8)' },
+				{ value: 'Asia/Dubai', text: '迪拜时间 (UTC+4)' },
+				{ value: 'Europe/London', text: '伦敦时间 (UTC+0/BST)' },
+				{ value: 'Europe/Paris', text: '巴黎时间 (UTC+1/CEST)' },
+				{ value: 'Europe/Berlin', text: '柏林时间 (UTC+1/CEST)' },
+				{ value: 'Europe/Moscow', text: '莫斯科时间 (UTC+3)' },
+				{ value: 'America/New_York', text: '纽约时间 (UTC-5/EDT)' },
+				{ value: 'America/Los_Angeles', text: '洛杉矶时间 (UTC-8/PDT)' },
+				{ value: 'America/Chicago', text: '芝加哥时间 (UTC-6/CDT)' },
+				{ value: 'America/Toronto', text: '多伦多时间 (UTC-5/EDT)' },
+				{ value: 'America/Sao_Paulo', text: '圣保罗时间 (UTC-3)' },
+				{ value: 'Australia/Sydney', text: '悉尼时间 (UTC+10/AEDT)' },
+				{ value: 'Australia/Melbourne', text: '墨尔本时间 (UTC+10/AEDT)' },
+				{ value: 'Pacific/Auckland', text: '奥克兰时间 (UTC+12/NZDT)' },
+				{ value: 'UTC', text: 'UTC 协调世界时' }
+			];
+
+			timezones.forEach(tz => {
+				const tzOption = timezoneContainer2.createEl('label', {
+					attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+				});
+				const tzRadioInput = tzOption.createEl('input', {
+					attr: { 
+						type: 'radio',
+						name: 'timestamp-timezone',
+						value: tz.value,
+						style: 'cursor: pointer;' 
+					}
+				}) as HTMLInputElement;
+				if (tz.value === currentTimezone) {
+					tzRadioInput.checked = true;
+				}
+				tzOption.createSpan({ text: tz.text });
+			});
+
+			// 配置更新函数
+			const updateConfig = () => {
+				let unit = 'ms';
+				const unitInput = unitContainer2.querySelector('input[name="timestamp-unit"]:checked') as HTMLInputElement;
+				if (unitInput) {
+					unit = unitInput.value;
+				}
+
+				let timezone = 'Asia/Shanghai';
+				const timezoneInput = timezoneContainer2.querySelector('input[name="timestamp-timezone"]:checked') as HTMLInputElement;
+				if (timezoneInput) {
+					timezone = timezoneInput.value;
+				}
+
+				const newConfig = { ...config, unit, timezone };
+				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
+			};
+
+			unitContainer2.addEventListener('change', updateConfig);
+			timezoneContainer2.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
+		// 为随机字符串生成操作添加配置 UI
+		if (operation.id === 'random-string') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentMinLength = config.minLength as number || 8;
+			const currentMaxLength = config.maxLength as number || 16;
+			const currentCharset = config.charset as string || '';
+			const currentCount = config.count as number || 10;
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 长度范围配置
+			const lengthContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const lengthLabel = lengthContainer.createEl('label', {
+				text: '长度范围:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const lengthInputsContainer = lengthContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 8px; align-items: center;' }
+			});
+
+			const minLengthInput = lengthInputsContainer.createEl('input', {
+				type: 'number',
+				cls: 'min-length-input',
+				attr: {
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal); width: 80px;',
+					min: '1',
+					max: '1000',
+					value: currentMinLength.toString()
+				}
+			});
+
+			lengthInputsContainer.createSpan({ text: '-' });
+
+			const maxLengthInput = lengthInputsContainer.createEl('input', {
+				type: 'number',
+				cls: 'max-length-input',
+				attr: {
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal); width: 80px;',
+					min: '1',
+					max: '1000',
+					value: currentMaxLength.toString()
+				}
+			});
+
+			// 字符集配置
+			const charsetContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const charsetLabel = charsetContainer.createEl('label', {
+				text: '字符集:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const charsetInput = charsetContainer.createEl('input', {
+				type: 'text',
+				cls: 'charset-input',
+				attr: {
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);',
+					placeholder: '输入允许的字符集'
+				}
+			});
+			charsetInput.value = currentCharset;
+
+			// 快速选择配置
+			const quickSelectContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const quickSelectLabel = quickSelectContainer.createEl('label', {
+				text: '快速选择:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const checkboxContainer = quickSelectContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px; flex-wrap: wrap;' }
+			});
+
+			const predefinedCharsets = [
+				{ key: 'digits', label: '数字', charset: '0123456789' },
+				{ key: 'lowercase', label: '小写字母', charset: 'abcdefghijklmnopqrstuvwxyz' },
+				{ key: 'uppercase', label: '大写字母', charset: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' },
+				{ key: 'symbols', label: '常用符号', charset: '~!@#$%^&*()_+' }
+			];
+
+			predefinedCharsets.forEach(item => {
+				const checkboxOption = checkboxContainer.createEl('label', {
+					attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+				});
+				const checkbox = checkboxOption.createEl('input', {
+					attr: { 
+						type: 'checkbox',
+						class: 'charset-checkbox',
+						'data-charset': item.charset,
+						style: 'cursor: pointer;' 
+					}
+				}) as HTMLInputElement;
+				checkboxOption.createSpan({ text: item.label });
+			});
+
+			// 生成数量配置
+			const countContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const countLabel = countContainer.createEl('label', {
+				text: '生成数量:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const countInput = countContainer.createEl('input', {
+				type: 'number',
+				cls: 'count-input',
+				attr: {
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);',
+					min: '1',
+					max: '1000',
+					value: currentCount.toString()
+				}
+			});
+
+			// 配置更新函数
+			const updateConfig = () => {
+				const minLength = parseInt(minLengthInput.value) || 8;
+				const maxLength = parseInt(maxLengthInput.value) || 16;
+				const charset = charsetInput.value || '';
+				const count = parseInt(countInput.value) || 10;
+
+				const newConfig = { ...config, minLength, maxLength, charset, count };
+				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
+			};
+
+			// 字符集选择框事件
+			checkboxContainer.addEventListener('change', (e) => {
+				const target = e.target as HTMLInputElement;
+				if (target.classList.contains('charset-checkbox')) {
+					const charset = target.getAttribute('data-charset');
+					if (charset) {
+						if (target.checked) {
+							// 添加到字符集（去重）
+							const currentCharset = charsetInput.value || '';
+							const combinedCharset = currentCharset + charset;
+							charsetInput.value = [...new Set(combinedCharset.split(''))].join('');
+						} else {
+							// 从字符集中移除
+							const currentCharset = charsetInput.value || '';
+							const newCharset = currentCharset.split('').filter(char => !charset.includes(char)).join('');
+							charsetInput.value = newCharset;
+						}
+						updateConfig();
+					}
+				}
+			});
+
+			// 其他输入事件
+			minLengthInput.addEventListener('input', updateConfig);
+			maxLengthInput.addEventListener('input', updateConfig);
+			charsetInput.addEventListener('input', updateConfig);
+			countInput.addEventListener('input', updateConfig);
+			updateConfig();
+		}
+
 		// 创建控制按钮容器
 		const buttonsContainer = content.createEl('div', {
 			cls: 'state-control-buttons',
@@ -2877,6 +3763,73 @@ export class CodecView extends ItemView {
 		};
 		
 		input.click();
+	}
+
+	private async importFileToInput(): Promise<void> {
+		try {
+			// 创建文件选择器
+			const input = document.createElement('input');
+			input.type = 'file';
+			input.accept = '.txt,.md,.json,.xml,.log,.csv,.html,.css,.js,.ts,.py,.java,.c,.cpp,.h,.go,.rs,.php,.sql,.sh,.bat,.text';
+			
+			input.onchange = async (event) => {
+				const file = (event.target as HTMLInputElement).files?.[0];
+				if (!file) return;
+				
+				try {
+					// 读取文件内容
+					const text = await file.text();
+					
+					// 写入输入框
+					const inputArea = this.containerEl.querySelector('.codec-input-area') as HTMLTextAreaElement;
+					if (inputArea) {
+						inputArea.value = text;
+						inputArea.dispatchEvent(new Event('input', { bubbles: true }));
+						
+						// 显示成功提示
+						new Notice(`已导入文件: ${file.name}`);
+					}
+				} catch (error) {
+					new Notice(`文件读取失败: ${error instanceof Error ? error.message : '未知错误'}`);
+				}
+			};
+			
+			input.click();
+		} catch (error) {
+			new Notice(`文件导入失败: ${error instanceof Error ? error.message : '未知错误'}`);
+		}
+	}
+
+	applyFontConfig(): void {
+		// 修复插件访问方式
+		const plugin = (this.app as any).plugins?.plugins?.['obsidian-codec'];
+		if (!plugin) return;
+		
+		const fontConfig = plugin?.getState?.()?.preferences?.fontConfig;
+		
+		if (!fontConfig) return;
+		
+		// 应用到输入框
+		const inputArea = this.containerEl.querySelector('.codec-input-area') as HTMLTextAreaElement;
+		if (inputArea) {
+			if (fontConfig.inputFontFamily) {
+				inputArea.style.fontFamily = fontConfig.inputFontFamily;
+			}
+			if (fontConfig.inputFontSize) {
+				inputArea.style.fontSize = fontConfig.inputFontSize;
+			}
+		}
+		
+		// 应用到输出框
+		const outputArea = this.containerEl.querySelector('.codec-output-area') as HTMLTextAreaElement;
+		if (outputArea) {
+			if (fontConfig.outputFontFamily) {
+				outputArea.style.fontFamily = fontConfig.outputFontFamily;
+			}
+			if (fontConfig.outputFontSize) {
+				outputArea.style.fontSize = fontConfig.outputFontSize;
+			}
+		}
 	}
 
 	// 检查立即执行

@@ -9,7 +9,9 @@ export enum OperationCategory {
 	EXTRACT_ANALYSIS = 'extract-analysis',
 	URL_IP = 'url-ip',
 	CUSTOM = 'custom',
-	DATETIME = 'datetime'
+	DATETIME = 'datetime',
+	MAC = 'mac',
+	OTHER = 'other'
 }
 
 export interface OperationResult {
@@ -68,6 +70,12 @@ export interface UserPreferences {
 	maxHistoryItems: number;
 	shortcutKey: string;
 	theme: 'obsidian' | 'dark' | 'light';
+	fontConfig?: {
+		inputFontFamily?: string;
+		inputFontSize?: string;
+		outputFontFamily?: string;
+		outputFontSize?: string;
+	};
 }
 
 export interface ViewState {

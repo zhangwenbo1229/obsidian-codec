@@ -2,7 +2,7 @@
 	"id": "obsidian-codec",
 	"name": "Obsidian Codec",
 	"minAppVersion": "0.15.0",
-	"description": "全能编解码插件 - 支持多种编码格式、加密算法、哈希运算和时间日期转换，带有可视化操作链和状态管理功能",
+	"description": "全能编解码插件 - 支持多种编码格式、加密算法、哈希运算、MAC认证、代码美化、时间日期转换、随机数据生成和UUID生成，带有可视化操作链、字体配置和状态管理功能",
 	"author": "zhangwenbo1229",
 	"authorUrl": "https://github.com/zhangwenbo1229",
 	"isDesktopOnly": false,
