@@ -4,6 +4,12 @@ import {
 	Base64DecodeOperation 
 } from './implementations/encodings/base64';
 import { 
+	ImageToBase64Operation
+} from './implementations/images/image-to-base64';
+import { 
+	Base64ToImageOperation
+} from './implementations/images/base64-to-image';
+import { 
 	URLEncodeOperation, 
 	URLDecodeOperation 
 } from './implementations/encodings/url';
@@ -50,6 +56,9 @@ import {
 import { 
 	SM3Operation 
 } from './implementations/hashes/sm3';
+import { 
+	FileHashOperation 
+} from './implementations/hashes/file-hash';
 import { 
 	RandomNumberOperation 
 } from './implementations/other/random-number';
@@ -161,6 +170,8 @@ export function registerAllOperations(): void {
 
 	globalRegistry.register(new Base64EncodeOperation());
 	globalRegistry.register(new Base64DecodeOperation());
+	globalRegistry.register(new Base64ToImageOperation());
+	globalRegistry.register(new ImageToBase64Operation());
 	globalRegistry.register(new URLEncodeOperation());
 	globalRegistry.register(new URLDecodeOperation());
 	globalRegistry.register(new HexEncodeOperation());
@@ -180,6 +191,7 @@ export function registerAllOperations(): void {
 	globalRegistry.register(new SHA256Operation());
 	globalRegistry.register(new SHA512Operation());
 	globalRegistry.register(new SM3Operation());
+	globalRegistry.register(new FileHashOperation());
 	globalRegistry.register(new RandomNumberOperation());
 	globalRegistry.register(new UUIDGenerateOperation());
 	globalRegistry.register(new RandomStringOperation());

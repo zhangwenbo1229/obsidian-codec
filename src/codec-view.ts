@@ -390,6 +390,26 @@ export class CodecView extends ItemView {
 			await this.importFileToInput();
 		});
 
+		const hashInputButton = inputHeader.createEl('span', {
+			cls: 'codec-hash-input-btn',
+			attr: { style: 'color: var(--text-accent); cursor: pointer; font-size: 13px; font-weight: 500; user-select: none; margin-right: 12px;' },
+			text: '文件哈希'
+		});
+
+		hashInputButton.addEventListener('click', async () => {
+			await this.importFileForHash();
+		});
+
+		const imageInputButton = inputHeader.createEl('span', {
+			cls: 'codec-image-input-btn',
+			attr: { style: 'color: var(--text-accent); cursor: pointer; font-size: 13px; font-weight: 500; user-select: none; margin-right: 12px;' },
+			text: '图片Base64'
+		});
+
+		imageInputButton.addEventListener('click', async () => {
+			await this.importImageForBase64();
+		});
+
 		const clearInputButton = inputHeader.createEl('span', {
 			cls: 'codec-clear-input-btn',
 			attr: { style: 'color: red; cursor: pointer; font-size: 13px; font-weight: 500; user-select: none;' },
@@ -4242,6 +4262,175 @@ export class CodecView extends ItemView {
 		} catch (error) {
 			new Notice(`文件导入失败: ${error instanceof Error ? error.message : '未知错误'}`);
 		}
+	}
+
+	private async importFileForHash(): Promise<void> {
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.accept = '*'; // 支持所有文件类型
+		
+		input.onchange = async (event) => {
+			const file = (event.target as HTMLInputElement).files?.[0];
+			if (!file) return;
+
+			try {
+				// 检查文件大小，决定处理策略
+				const fileSize = file.size;
+				const isLargeFile = fileSize > 10 * 1024 * 1024; // 10MB
+
+				let fileContent: string;
+				let hashResult: string;
+
+				if (isLargeFile) {
+					// 大文件：分块读取并计算哈希
+					hashResult = await this.calculateFileHashChunked(file);
+				} else {
+					// 小文件：直接读取整个文件
+					const buffer = await file.arrayBuffer();
+					const bytes = new Uint8Array(buffer);
+					fileContent = this.bytesToText(bytes, file.type);
+					hashResult = this.calculateTextHash(fileContent, 'SHA256');
+				}
+
+				// 显示哈希结果
+				const inputArea = this.containerEl.querySelector('.codec-input-area') as HTMLTextAreaElement;
+				if (inputArea) {
+					inputArea.value = `文件: ${file.name} (${this.formatFileSize(fileSize)})\n哈希值: ${hashResult}\n\n文件内容预览:\n${fileContent.substring(0, 1000)}...`;
+					inputArea.dispatchEvent(new Event('input', { bubbles: true }));
+					new Notice(`文件哈希计算完成: ${file.name}`);
+				}
+			} catch (error) {
+				new Notice(`文件读取失败: ${error instanceof Error ? error.message : '未知错误'}`);
+			}
+		};
+
+		input.click();
+	}
+
+	private async importImageForBase64(): Promise<void> {
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.accept = 'image/*'; // 仅支持图片文件
+		
+		input.onchange = async (event) => {
+			const file = (event.target as HTMLInputElement).files?.[0];
+			if (!file) return;
+
+			try {
+				const reader = new FileReader();
+				
+				reader.onload = (e) => {
+					const arrayBuffer = e.target?.result as ArrayBuffer;
+					const bytes = new Uint8Array(arrayBuffer);
+					const base64 = this.arrayBufferToBase64(bytes);
+					const mimeType = file.type;
+					
+					// 生成Data URL格式的输出
+					const dataUrl = `data:${mimeType};base64,${base64}`;
+					
+					const inputArea = this.containerEl.querySelector('.codec-input-area') as HTMLTextAreaElement;
+					if (inputArea) {
+						inputArea.value = dataUrl;
+						inputArea.dispatchEvent(new Event('input', { bubbles: true }));
+						new Notice(`图片已转换为Base64: ${file.name}`);
+					}
+				};
+				
+				reader.onerror = () => {
+					new Notice('图片读取失败');
+				};
+				
+				reader.readAsArrayBuffer(file);
+			} catch (error) {
+				new Notice(`图片处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
+			}
+		};
+
+		input.click();
+	}
+
+	private arrayBufferToBase64(buffer: ArrayBuffer): string {
+		const bytes = new Uint8Array(buffer);
+		let binary = '';
+		for (let i = 0; i < bytes.byteLength; i++) {
+			binary += String.fromCharCode(bytes[i]);
+		}
+		return btoa(binary);
+	}
+
+	private bytesToText(bytes: Uint8Array, mimeType: string): string {
+		// 根据MIME类型决定如何处理二进制数据
+		if (mimeType.startsWith('text/') || mimeType.startsWith('application/json') || mimeType.startsWith('application/xml')) {
+			// 文本类型：直接转换为字符串
+			return new TextDecoder().decode(bytes);
+		} else {
+			// 二进制类型：转换为十六进制表示
+			return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
+		}
+	}
+
+	private calculateTextHash(text: string, algorithm: string): string {
+		// 使用crypto-js计算文本哈希
+		switch (algorithm) {
+			case 'MD5':
+				const MD5 = require('crypto-js/md5');
+				return MD5(text).toString();
+			case 'SHA256':
+				const SHA256 = require('crypto-js/sha256');
+				return SHA256(text).toString();
+			case 'SHA512':
+				const SHA512 = require('crypto-js/sha512');
+				return SHA512(text).toString();
+			default:
+				return text; // 如果不支持的算法，返回原始文本
+		}
+	}
+
+	private async calculateFileHashChunked(file: File): Promise<string> {
+		const chunkSize = 1024 * 1024; // 1MB chunks
+		const fileSize = file.size;
+		const chunks = Math.ceil(fileSize / chunkSize);
+		
+		// 使用crypto-js的增量哈希功能
+		const SHA256 = require('crypto-js/sha256');
+		let hash = SHA256('');
+		
+		for (let i = 0; i < chunks; i++) {
+			const start = i * chunkSize;
+			const end = Math.min(start + chunkSize, fileSize);
+			const chunk = file.slice(start, end);
+			
+			// 读取分块并更新哈希
+			const arrayBuffer = await chunk.arrayBuffer();
+			const wordArray = this.arrayBufferToWordArray(arrayBuffer);
+			hash = SHA256(hash + wordArray);
+		}
+		
+		return hash.toString();
+	}
+
+	private arrayBufferToWordArray(buffer: ArrayBuffer): any {
+		const words = [];
+		const bytes = new Uint8Array(buffer);
+		for (let i = 0; i < bytes.length; i += 4) {
+			words.push((bytes[i] << 24) | (bytes[i + 1] << 16) | (bytes[i + 2] << 8) | bytes[i + 3]);
+		}
+		return words;
+	}
+
+	private shouldProcessAsLargeFile(file: File): boolean {
+		const size = file.size;
+		// 根据文件类型和大小决定处理策略
+		if (file.type.startsWith('image/')) {
+			return size > 5 * 1024 * 1024; // 图片大于5MB时使用分块处理
+		}
+		return size > 10 * 1024 * 1024; // 其他文件大于10MB时使用分块处理
+	}
+
+	private formatFileSize(bytes: number): string {
+		const sizes = ['B', 'KB', 'MB', 'GB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(1024));
+		return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
 	}
 
 	applyFontConfig(): void {
