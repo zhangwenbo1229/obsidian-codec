@@ -94,8 +94,23 @@ import {
 import { 
 	DESDecryptOperation 
 } from './implementations/encryption/des-decrypt';
-import { TripleDESEncryptOperation } from './implementations/encryption/triple-des-encrypt';
-import { TripleDESDecryptOperation } from './implementations/encryption/triple-des-decrypt';
+import { 
+	TripleDESEncryptOperation 
+} from './implementations/encryption/triple-des-encrypt';
+import { 
+	RSAEncryptOperation 
+} from './implementations/encryption/rsa-encrypt';
+import { 
+	SM2EncryptOperation 
+} from './implementations/encryption/sm2-encrypt';import { 
+	TripleDESDecryptOperation 
+} from './implementations/encryption/triple-des-decrypt';
+import { 
+	RSADecryptOperation 
+} from './implementations/decryption/rsa-decrypt';
+import { 
+	SM2DecryptOperation 
+} from './implementations/decryption/sm2-decrypt';
 import { AESEncryptOperation } from './implementations/encryption/aes-encrypt';
 import { AESDecryptOperation } from './implementations/encryption/aes-decrypt';
 import { AESGCMEncryptOperation } from './implementations/encryption/aes-gcm-encrypt';
@@ -181,7 +196,11 @@ export function registerAllOperations(): void {
 	globalRegistry.register(new DESEncryptOperation());
 	globalRegistry.register(new DESDecryptOperation());
 	globalRegistry.register(new TripleDESEncryptOperation());
+	globalRegistry.register(new RSAEncryptOperation());
+	globalRegistry.register(new SM2EncryptOperation());
 	globalRegistry.register(new TripleDESDecryptOperation());
+	globalRegistry.register(new RSADecryptOperation());
+	globalRegistry.register(new SM2DecryptOperation());
 	globalRegistry.register(new AESEncryptOperation());
 	globalRegistry.register(new AESDecryptOperation());
 	globalRegistry.register(new AESGCMEncryptOperation());

@@ -3429,6 +3429,450 @@ export class CodecView extends ItemView {
 			updateConfig();
 		}
 
+		// 为RSA加密操作添加配置UI
+		if (operation.id === 'rsa-encrypt') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentPublicKey = config.publicKey as string || '';
+			const currentPadding = config.padding as string || 'RSA-OAEP';
+			const currentHash = config.hashAlgorithm as string || 'SHA-256';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 公钥输入
+			const keyContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyLabel = keyContainer.createEl('label', {
+				text: '公钥:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyTextarea = keyContainer.createEl('textarea', {
+				cls: 'rsa-public-key-input',
+				attr: {
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal); min-height: 60px; resize: vertical;',
+					placeholder: '输入PEM格式的RSA公钥'
+				}
+			});
+			keyTextarea.value = currentPublicKey;
+
+			// 填充方式
+			const paddingContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const paddingLabel = paddingContainer.createEl('label', {
+				text: '填充方式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const paddingContainer2 = paddingContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px;' }
+			});
+
+			const paddings = [
+				{ value: 'RSA-OAEP', text: 'RSA-OAEP' },
+				{ value: 'PKCS1v15', text: 'PKCS1v15' },
+				{ value: 'JSEncrypt', text: 'JSEncrypt' }
+			];
+
+			paddings.forEach(padding => {
+				const paddingOption = paddingContainer2.createEl('label', {
+					attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+				});
+				const paddingRadioInput = paddingOption.createEl('input', {
+					attr: { 
+						type: 'radio',
+						name: 'rsa-padding',
+						value: padding.value,
+						style: 'cursor: pointer;' 
+					}
+				}) as HTMLInputElement;
+				if (padding.value === currentPadding) {
+					paddingRadioInput.checked = true;
+				}
+				paddingOption.createSpan({ text: padding.text });
+			});
+
+			// Hash算法
+			const hashContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const hashLabel = hashContainer.createEl('label', {
+				text: 'Hash算法:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const hashContainer2 = hashContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px;' }
+			});
+
+			const hashAlgorithms = [
+				{ value: 'SHA-1', text: 'SHA-1' },
+				{ value: 'SHA-256', text: 'SHA-256' },
+				{ value: 'SHA-384', text: 'SHA-384' },
+				{ value: 'SHA-512', text: 'SHA-512' },
+				{ value: 'MD5', text: 'MD5' }
+			];
+
+			hashAlgorithms.forEach(hash => {
+				const hashOption = hashContainer2.createEl('label', {
+					attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+				});
+				const hashRadioInput = hashOption.createEl('input', {
+					attr: { 
+						type: 'radio',
+						name: 'rsa-hash',
+						value: hash.value,
+						style: 'cursor: pointer;' 
+					}
+				}) as HTMLInputElement;
+				if (hash.value === currentHash) {
+					hashRadioInput.checked = true;
+				}
+				hashOption.createSpan({ text: hash.text });
+			});
+
+			// 配置更新函数
+			const updateConfig = () => {
+				let padding = 'RSA-OAEP';
+				const paddingInput = paddingContainer2.querySelector('input[name="rsa-padding"]:checked') as HTMLInputElement;
+				if (paddingInput) {
+					padding = paddingInput.value;
+				}
+
+				let hashAlgorithm = 'SHA-256';
+				const hashInput = hashContainer2.querySelector('input[name="rsa-hash"]:checked') as HTMLInputElement;
+				if (hashInput) {
+					hashAlgorithm = hashInput.value;
+				}
+
+				const publicKey = keyTextarea.value || '';
+
+				const newConfig = { ...config, publicKey, padding, hashAlgorithm };
+				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
+			};
+
+			keyTextarea.addEventListener('input', updateConfig);
+			paddingContainer2.addEventListener('change', updateConfig);
+			hashContainer2.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
+		// 为SM2加密操作添加配置UI
+		if (operation.id === 'sm2-encrypt') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentPublicKey = config.publicKey as string || '';
+			const currentFormat = config.format as string || 'C1C3C2';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 公钥输入
+			const keyContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyLabel = keyContainer.createEl('label', {
+				text: '公钥:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyTextarea = keyContainer.createEl('textarea', {
+				cls: 'sm2-public-key-input',
+				attr: {
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal); min-height: 60px; resize: vertical;',
+					placeholder: '输入SM2公钥（04开头格式）'
+				}
+			});
+			keyTextarea.value = currentPublicKey;
+
+			// 编码格式
+			const formatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const formatLabel = formatContainer.createEl('label', {
+				text: '编码格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const formatContainer2 = formatContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px;' }
+			});
+
+			const formats = [
+				{ value: 'ASN1', text: 'ASN1' },
+				{ value: 'C1C2C3', text: 'C1C2C3' },
+				{ value: 'C1C3C2', text: 'C1C3C2' }
+			];
+
+			formats.forEach(format => {
+				const formatOption = formatContainer2.createEl('label', {
+					attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+				});
+				const formatRadioInput = formatOption.createEl('input', {
+					attr: { 
+						type: 'radio',
+						name: 'sm2-format',
+						value: format.value,
+						style: 'cursor: pointer;' 
+					}
+				}) as HTMLInputElement;
+				if (format.value === currentFormat) {
+					formatRadioInput.checked = true;
+				}
+				formatOption.createSpan({ text: format.text });
+			});
+
+			// 配置更新函数
+			const updateConfig = () => {
+				let format = 'C1C3C2';
+				const formatInput = formatContainer2.querySelector('input[name="sm2-format"]:checked') as HTMLInputElement;
+				if (formatInput) {
+					format = formatInput.value;
+				}
+
+				const publicKey = keyTextarea.value || '';
+
+				const newConfig = { ...config, publicKey, format };
+				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
+			};
+
+			keyTextarea.addEventListener('input', updateConfig);
+			formatContainer2.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
+		// 为RSA解密操作添加配置UI
+		if (operation.id === 'rsa-decrypt') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentPrivateKey = config.privateKey as string || '';
+			const currentPadding = config.padding as string || 'RSA-OAEP';
+			const currentHash = config.hashAlgorithm as string || 'SHA-256';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 私钥输入
+			const keyContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyLabel = keyContainer.createEl('label', {
+				text: '私钥:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyTextarea = keyContainer.createEl('textarea', {
+				cls: 'rsa-private-key-input',
+				attr: {
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal); min-height: 60px; resize: vertical;',
+					placeholder: '输入PEM格式的RSA私钥'
+				}
+			});
+			keyTextarea.value = currentPrivateKey;
+
+			// 填充方式
+			const paddingContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const paddingLabel = paddingContainer.createEl('label', {
+				text: '填充方式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const paddingContainer2 = paddingContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px;' }
+			});
+
+			const paddings = [
+				{ value: 'RSA-OAEP', text: 'RSA-OAEP' },
+				{ value: 'PKCS1v15', text: 'PKCS1v15' },
+				{ value: 'JSEncrypt', text: 'JSEncrypt' }
+			];
+
+			paddings.forEach(padding => {
+				const paddingOption = paddingContainer2.createEl('label', {
+					attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+				});
+				const paddingRadioInput = paddingOption.createEl('input', {
+					attr: { 
+						type: 'radio',
+						name: 'rsa-decrypt-padding',
+						value: padding.value,
+						style: 'cursor: pointer;' 
+					}
+				}) as HTMLInputElement;
+				if (padding.value === currentPadding) {
+					paddingRadioInput.checked = true;
+				}
+				paddingOption.createSpan({ text: padding.text });
+			});
+
+			// Hash算法
+			const hashContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const hashLabel = hashContainer.createEl('label', {
+				text: 'Hash算法:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const hashContainer2 = hashContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px;' }
+			});
+
+			const hashAlgorithms = [
+				{ value: 'SHA-1', text: 'SHA-1' },
+				{ value: 'SHA-256', text: 'SHA-256' },
+				{ value: 'SHA-384', text: 'SHA-384' },
+				{ value: 'SHA-512', text: 'SHA-512' },
+				{ value: 'MD5', text: 'MD5' }
+			];
+
+			hashAlgorithms.forEach(hash => {
+				const hashOption = hashContainer2.createEl('label', {
+					attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+				});
+				const hashRadioInput = hashOption.createEl('input', {
+					attr: { 
+						type: 'radio',
+						name: 'rsa-decrypt-hash',
+						value: hash.value,
+						style: 'cursor: pointer;' 
+					}
+				}) as HTMLInputElement;
+				if (hash.value === currentHash) {
+					hashRadioInput.checked = true;
+				}
+				hashOption.createSpan({ text: hash.text });
+			});
+
+			// 配置更新函数
+			const updateConfig = () => {
+				let padding = 'RSA-OAEP';
+				const paddingInput = paddingContainer2.querySelector('input[name="rsa-decrypt-padding"]:checked') as HTMLInputElement;
+				if (paddingInput) {
+					padding = paddingInput.value;
+				}
+
+				let hashAlgorithm = 'SHA-256';
+				const hashInput = hashContainer2.querySelector('input[name="rsa-decrypt-hash"]:checked') as HTMLInputElement;
+				if (hashInput) {
+					hashAlgorithm = hashInput.value;
+				}
+
+				const privateKey = keyTextarea.value || '';
+
+				const newConfig = { ...config, privateKey, padding, hashAlgorithm };
+				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
+			};
+
+			keyTextarea.addEventListener('input', updateConfig);
+			paddingContainer2.addEventListener('change', updateConfig);
+			hashContainer2.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
+		// 为SM2解密操作添加配置UI
+		if (operation.id === 'sm2-decrypt') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentPrivateKey = config.privateKey as string || '';
+			const currentFormat = config.format as string || 'C1C3C2';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 私钥输入
+			const keyContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const keyLabel = keyContainer.createEl('label', {
+				text: '私钥:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const keyTextarea = keyContainer.createEl('textarea', {
+				cls: 'sm2-private-key-input',
+				attr: {
+					style: 'font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal); min-height: 60px; resize: vertical;',
+					placeholder: '输入SM2私钥'
+				}
+			});
+			keyTextarea.value = currentPrivateKey;
+
+			// 编码格式
+			const formatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const formatLabel = formatContainer.createEl('label', {
+				text: '编码格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const formatContainer2 = formatContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px;' }
+			});
+
+			const formats = [
+				{ value: 'ASN1', text: 'ASN1' },
+				{ value: 'C1C2C3', text: 'C1C2C3' },
+				{ value: 'C1C3C2', text: 'C1C3C2' }
+			];
+
+			formats.forEach(format => {
+				const formatOption = formatContainer2.createEl('label', {
+					attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+				});
+				const formatRadioInput = formatOption.createEl('input', {
+					attr: { 
+						type: 'radio',
+						name: 'sm2-decrypt-format',
+						value: format.value,
+						style: 'cursor: pointer;' 
+					}
+				}) as HTMLInputElement;
+				if (format.value === currentFormat) {
+					formatRadioInput.checked = true;
+				}
+				formatOption.createSpan({ text: format.text });
+			});
+
+			// 配置更新函数
+			const updateConfig = () => {
+				let format = 'C1C3C2';
+				const formatInput = formatContainer2.querySelector('input[name="sm2-decrypt-format"]:checked') as HTMLInputElement;
+				if (formatInput) {
+					format = formatInput.value;
+				}
+
+				const privateKey = keyTextarea.value || '';
+
+				const newConfig = { ...config, privateKey, format };
+				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
+			};
+
+			keyTextarea.addEventListener('input', updateConfig);
+			formatContainer2.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
 		// 创建控制按钮容器
 		const buttonsContainer = content.createEl('div', {
 			cls: 'state-control-buttons',

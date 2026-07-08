@@ -62,7 +62,14 @@ export class Base64DecodeOperation extends BaseOperation {
 		}
 		
 		try {
-			return decodeURIComponent(escape(atob(input)));
+			// 清理输入：移除可能的空格和换行
+			const cleanedInput = input.replace(/\s/g, '');
+			
+			// 标准Base64解码
+			const decoded = atob(cleanedInput);
+			
+			// 将解码结果转换为UTF-8文本
+			return decodeURIComponent(escape(decoded));
 		} catch (error) {
 			throw new Error(`Base64 解码失败: 输入不是有效的 Base64 格式`);
 		}
