@@ -113,45 +113,45 @@ export class CodecView extends ItemView {
 		this.renderOperationsList(operationList);
 	}
 
-	private renderOperationsList(container: HTMLElement): void {
+	private renderOperationsList(container: HTMLElement, operations?: Operation[], expandAll: boolean = false): void {
 		const { globalRegistry } = this.plugin;
-		const operations = globalRegistry.listAll();
+		const opsToRender = operations || globalRegistry.listAll();
 
 		container.empty();
 		
 		const groupedOps = {
-			encoding: operations.filter(op => op.category === 'encoding'),
-			decoding: operations.filter(op => op.category === 'decoding'),
-			hash: operations.filter(op => op.category === 'hash'),
-			encryption: operations.filter(op => op.category === 'encryption'),
-			decryption: operations.filter(op => op.category === 'decryption'),
-			beautify: operations.filter(op => op.category === 'beautify'),
-			dataFormat: operations.filter(op => op.category === 'data-format'),
-			extractAnalysis: operations.filter(op => op.category === 'extract-analysis'),
-			urlIp: operations.filter(op => op.category === 'url-ip'),
-			datetime: operations.filter(op => op.category === 'datetime'),
-			mac: operations.filter(op => op.category === 'mac'),
-			other: operations.filter(op => op.category === 'other')
+			encoding: opsToRender.filter(op => op.category === 'encoding'),
+			decoding: opsToRender.filter(op => op.category === 'decoding'),
+			hash: opsToRender.filter(op => op.category === 'hash'),
+			encryption: opsToRender.filter(op => op.category === 'encryption'),
+			decryption: opsToRender.filter(op => op.category === 'decryption'),
+			beautify: opsToRender.filter(op => op.category === 'beautify'),
+			dataFormat: opsToRender.filter(op => op.category === 'data-format'),
+			extractAnalysis: opsToRender.filter(op => op.category === 'extract-analysis'),
+			urlIp: opsToRender.filter(op => op.category === 'url-ip'),
+			datetime: opsToRender.filter(op => op.category === 'datetime'),
+			mac: opsToRender.filter(op => op.category === 'mac'),
+			other: opsToRender.filter(op => op.category === 'other')
 		};
 
-		this.renderOperationCategory(container, '编码', groupedOps.encoding);
-		this.renderOperationCategory(container, '解码', groupedOps.decoding);
-		this.renderOperationCategory(container, '哈希', groupedOps.hash);
-		this.renderOperationCategory(container, '加密', groupedOps.encryption);
-		this.renderOperationCategory(container, '解密', groupedOps.decryption);
-		this.renderOperationCategory(container, '数据美化', groupedOps.beautify);
-		this.renderOperationCategory(container, '数据格式', groupedOps.dataFormat);
-		this.renderOperationCategory(container, '提取分析', groupedOps.extractAnalysis);
-		this.renderOperationCategory(container, 'URL/IP', groupedOps.urlIp);
-		this.renderOperationCategory(container, '时间日期', groupedOps.datetime);
-		this.renderOperationCategory(container, 'MAC', groupedOps.mac);
-		this.renderOperationCategory(container, '其他', groupedOps.other);
+		this.renderOperationCategory(container, '编码', groupedOps.encoding, expandAll);
+		this.renderOperationCategory(container, '解码', groupedOps.decoding, expandAll);
+		this.renderOperationCategory(container, '哈希', groupedOps.hash, expandAll);
+		this.renderOperationCategory(container, '加密', groupedOps.encryption, expandAll);
+		this.renderOperationCategory(container, '解密', groupedOps.decryption, expandAll);
+		this.renderOperationCategory(container, '数据美化', groupedOps.beautify, expandAll);
+		this.renderOperationCategory(container, '数据格式', groupedOps.dataFormat, expandAll);
+		this.renderOperationCategory(container, '提取分析', groupedOps.extractAnalysis, expandAll);
+		this.renderOperationCategory(container, 'URL/IP', groupedOps.urlIp, expandAll);
+		this.renderOperationCategory(container, '时间日期', groupedOps.datetime, expandAll);
+		this.renderOperationCategory(container, 'MAC', groupedOps.mac, expandAll);
+		this.renderOperationCategory(container, '其他', groupedOps.other, expandAll);
 		
 		// 重新绑定拖拽事件
 		this.bindDragEvents();
 	}
 
-	private renderOperationCategory(container: HTMLElement, title: string, operations: any[]): void {
+	private renderOperationCategory(container: HTMLElement, title: string, operations: any[], expandAll: boolean = false): void {
 		if (operations.length === 0) return;
 
 		const category = container.createEl('div', {
@@ -180,7 +180,7 @@ export class CodecView extends ItemView {
 
 		const operationsContainer = category.createEl('div', {
 			cls: 'codec-category-operations',
-			attr: { style: 'display: none;' } // 默认折叠状态
+			attr: { style: expandAll ? 'display: block;' : 'display: none;' } // 根据expandAll参数决定折叠状态
 		});
 
 		operations.forEach(operation => {
@@ -637,13 +637,21 @@ export class CodecView extends ItemView {
 			operations = globalRegistry.getByCategory(category as any);
 		}
 
+		let expandAll = false;
 		if (query) {
-			operations = globalRegistry.search(query);
+			const lowerQuery = query.toLowerCase();
+			operations = operations.filter(op => 
+				op.name.toLowerCase().includes(lowerQuery) ||
+				op.description.toLowerCase().includes(lowerQuery) ||
+				op.id.toLowerCase().includes(lowerQuery)
+			);
+			// 当有搜索查询时，展开所有分组
+			expandAll = true;
 		}
 
 		const operationList = this.containerEl.querySelector('.codec-operation-list') as HTMLElement;
 		if (operationList) {
-			this.renderOperationsList(operationList);
+			this.renderOperationsList(operationList, operations, expandAll);
 		}
 	}
 
