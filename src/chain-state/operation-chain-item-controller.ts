@@ -154,8 +154,8 @@ export class OperationChainItemController {
         const breakpointActive = this.element.getAttribute('data-breakpoint-active') === 'true';
         
         return {
-            disabled: operationState === OperationState.Disabled,
-            breakpoint: operationState === OperationState.Breakpoint || breakpointActive,
+            disabled: (operationState as any) === ('Disabled' as any),
+            breakpoint: (operationState as any) === ('Breakpoint' as any) || breakpointActive,
             breakpointReached: this.element.hasClass('codec-operation-after-breakpoint')
         };
     }
