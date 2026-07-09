@@ -1,4 +1,5 @@
-import { Operation, OperationCategory, OperationResult, ValidationResult, FileData } from '../types';
+import { OperationCategory, OperationResult, ValidationResult, FileData } from '../types';
+import { Operation } from '../interfaces';
 import { FileManager } from '../file-manager';
 
 export abstract class BaseOperation implements Operation {
