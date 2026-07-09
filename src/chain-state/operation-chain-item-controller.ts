@@ -1,7 +1,6 @@
 // src/chain-state/operation-chain-item-controller.ts
 
 import { OperationRuntimeState, OperationState } from './operation-runtime-state';
-import { setIcon } from 'obsidian';
 
 /**
  * 单个操作链项的控制器

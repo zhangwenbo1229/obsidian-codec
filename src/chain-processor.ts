@@ -1,6 +1,5 @@
 import type { OperationRegistry } from './operation-registry';
-import type { Operation } from './operations/interfaces';
-import { OperationCategory, OperationConfig, ChainResult, ChainStepResult, ValidationResult } from './types';
+import { OperationConfig, ChainResult, ChainStepResult } from './types';
 import { OperationRuntimeState } from './chain-state';
 
 export interface ChainProcessorOptions {

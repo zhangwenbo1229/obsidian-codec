@@ -2,7 +2,7 @@ import { ItemView, WorkspaceLeaf, Notice, setIcon } from 'obsidian';
 import { VIEW_TYPE } from './constants';
 import CodecPlugin from './main';
 import { SaveChainModal } from './modal/save-chain-modal';
-import { ChainStateManager, OperationChainItemController, OperationRuntimeState } from './chain-state';
+import { ChainStateManager, OperationChainItemController } from './chain-state';
 
 export class CodecView extends ItemView {
 	private plugin: CodecPlugin;
@@ -58,8 +58,8 @@ export class CodecView extends ItemView {
 		this.renderThreePanelLayout(container);
 		
 		// 应用字体配置
-		// 使用 setTimeout 确保 DOM 完全渲染后再应用字体
-		setTimeout(() => {
+		// 使用 activeWindow.setTimeout 确保 DOM 完全渲染后再应用字体
+		activeWindow.setTimeout(() => {
 			this.applyFontConfig();
 		}, 100);
 	}
@@ -97,6 +97,13 @@ export class CodecView extends ItemView {
 			cls: 'codec-search',
 			attr: { placeholder: '搜索操作...' }
 		});
+		
+		if (searchBox) {
+			searchBox.addEventListener('input', (event) => {
+				const searchTerm = (event.target as HTMLInputElement).value.toLowerCase();
+				this.filterOperations(searchTerm);
+			});
+		}
 
 		const operationList = panel.createEl('div', {
 			cls: 'codec-operation-list',
