@@ -17,7 +17,6 @@ export class Base64ToImageOperation extends BaseOperation {
 	protected async executeLogic(input: string, config: Record<string, unknown>): Promise<string> {
 		try {
 			const outputFormat = (config.outputFormat as string) || 'preview';
-			const autoSave = (config.autoSave as boolean) === true;
 
 			// 清理输入数据
 			const cleanedInput = this.cleanBase64Input(input);
@@ -29,7 +28,7 @@ export class Base64ToImageOperation extends BaseOperation {
 				case 'preview':
 					return this.generateImagePreview(cleanedInput);
 				case 'file':
-					return await this.saveAsImageFile(cleanedInput, config);
+					return await this.saveAsImageFile(cleanedInput);
 				case 'data-url':
 					return this.generateDataURL(cleanedInput);
 				default:
@@ -65,10 +64,13 @@ export class Base64ToImageOperation extends BaseOperation {
 
 	private generateImagePreview(base64: string): string {
 		const mimeType = this.detectMimeType(base64);
-		return `[图片预览: ${mimeType}]\nBase64长度: ${base64.length} 字符\n预览:\n<img src="data:${mimeType};base64,${base64}" style="max-width:100%" />`;
+		const dataUrl = `data:${mimeType};base64,${base64}`;
+		
+		// 由于输出区域是textarea，无法渲染HTML，提供替代方案
+		return `[图片预览: ${mimeType}]\nBase64长度: ${base64.length} 字符\n\n由于输出区域限制，无法直接显示图片。\n如需查看图片，请选择"保存为文件"选项，或使用以下Data URL:\n\n${dataUrl}\n\n您也可以将上述Data URL复制到浏览器地址栏查看图片。`;
 	}
 
-	private async saveAsImageFile(base64: string, config: Record<string, unknown>): Promise<string> {
+	private async saveAsImageFile(base64: string): Promise<string> {
 		const mimeType = this.detectMimeType(base64);
 		const extension = this.getMimeExtension(mimeType);
 		

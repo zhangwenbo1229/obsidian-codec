@@ -14,11 +14,22 @@ export enum OperationCategory {
 	OTHER = 'other'
 }
 
+// 新增：文件数据接口
+export interface FileData {
+	name: string;
+	type: string;
+	size: number;
+	data: string | ArrayBuffer;
+	isFile: boolean;
+	mimeType?: string;
+}
+
 export interface OperationResult {
 	success: boolean;
 	data: string;
 	error?: string;
 	metadata?: Record<string, unknown>;
+	fileData?: FileData;
 }
 
 export interface ValidationResult {

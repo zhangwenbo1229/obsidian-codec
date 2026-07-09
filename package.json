@@ -19,6 +19,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/exif-js": "^2.3.1",
     "@types/js-beautify": "^1.14.3",
     "@types/node": "^18.19.67",
     "builtin-modules": "3.3.0",
@@ -36,6 +37,7 @@
   "dependencies": {
     "@types/crypto-js": "^4.2.2",
     "crypto-js": "^4.2.0",
+    "exif-js": "^2.3.0",
     "js-beautify": "^1.15.4"
   }
 }

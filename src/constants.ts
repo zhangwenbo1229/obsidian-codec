@@ -8,8 +8,12 @@ export const OPERATION_CATEGORIES = {
 	[OperationCategory.DECRYPTION]: '解密',
 	[OperationCategory.BEAUTIFY]: '数据美化',
 	[OperationCategory.DATA_FORMAT]: '数据格式',
-	[OperationCategory.CUSTOM]: '自定义',
-	[OperationCategory.DATETIME]: '时间日期'
+	[OperationCategory.EXTRACT_ANALYSIS]: '提取分析',
+	[OperationCategory.URL_IP]: 'URL/IP',
+	[OperationCategory.DATETIME]: '时间日期',
+	[OperationCategory.MAC]: 'MAC认证',
+	[OperationCategory.OTHER]: '其他',
+	[OperationCategory.CUSTOM]: '自定义'
 };
 
 export const DEFAULT_PREFERENCES: UserPreferences = {

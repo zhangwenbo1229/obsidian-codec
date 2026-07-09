@@ -390,24 +390,14 @@ export class CodecView extends ItemView {
 			await this.importFileToInput();
 		});
 
-		const hashInputButton = inputHeader.createEl('span', {
-			cls: 'codec-hash-input-btn',
+		const selectFileButton = inputHeader.createEl('span', {
+			cls: 'codec-select-file-btn',
 			attr: { style: 'color: var(--text-accent); cursor: pointer; font-size: 13px; font-weight: 500; user-select: none; margin-right: 12px;' },
-			text: '文件哈希'
+			text: '选中'
 		});
 
-		hashInputButton.addEventListener('click', async () => {
-			await this.importFileForHash();
-		});
-
-		const imageInputButton = inputHeader.createEl('span', {
-			cls: 'codec-image-input-btn',
-			attr: { style: 'color: var(--text-accent); cursor: pointer; font-size: 13px; font-weight: 500; user-select: none; margin-right: 12px;' },
-			text: '图片Base64'
-		});
-
-		imageInputButton.addEventListener('click', async () => {
-			await this.importImageForBase64();
+		selectFileButton.addEventListener('click', async () => {
+			await this.selectFileAsInput();
 		});
 
 		const clearInputButton = inputHeader.createEl('span', {
@@ -732,6 +722,132 @@ export class CodecView extends ItemView {
 				const newConfig = { ...config, format: target.value };
 				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
 			});
+		}
+
+		// 为图片转Base64操作添加配置UI
+		if (operation.id === 'image-to-base64') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentFormat = config.format as string || 'data-url';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 输出格式标签
+			const formatLabel = configContainer.createEl('label', {
+				text: '输出格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			// 格式选项容器
+			const formatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px; flex-wrap: wrap;' }
+			});
+
+			const formats = [
+				{ value: 'data-url', text: 'Data URL' },
+				{ value: 'html-img', text: 'HTML标签' }
+			];
+
+			formats.forEach(format => {
+				const formatOption = formatContainer.createEl('label', {
+					attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+				});
+				
+				const formatRadioInput = formatOption.createEl('input', {
+					attr: { 
+						type: 'radio',
+						name: 'image-base64-format',
+						value: format.value,
+						style: 'cursor: pointer;' 
+					}
+				}) as HTMLInputElement;
+				
+				if (format.value === currentFormat) {
+					formatRadioInput.checked = true;
+				}
+				
+				formatOption.createSpan({ text: format.text });
+			});
+
+			// 配置更新函数
+			const updateConfig = () => {
+				let format = 'data-url';
+				const formatInput = formatContainer.querySelector('input[name="image-base64-format"]:checked') as HTMLInputElement;
+				if (formatInput) {
+					format = formatInput.value;
+				}
+
+				const newConfig = { ...config, format };
+				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
+			};
+
+			formatContainer.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
+		// 为Base64转图片操作添加配置UI
+		if (operation.id === 'base64-to-image') {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentOutputFormat = config.outputFormat as string || 'preview';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 输出格式标签
+			const formatLabel = configContainer.createEl('label', {
+				text: '输出格式:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			// 格式选项容器
+			const formatContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; gap: 12px; font-size: 11px; flex-wrap: wrap;' }
+			});
+
+			const formats = [
+				{ value: 'preview', text: '预览' },
+				{ value: 'file', text: '保存文件' }
+			];
+
+			formats.forEach(format => {
+				const formatOption = formatContainer.createEl('label', {
+					attr: { style: 'display: flex; align-items: center; gap: 4px; cursor: pointer;' }
+				});
+				
+				const formatRadioInput = formatOption.createEl('input', {
+					attr: { 
+						type: 'radio',
+						name: 'base64-image-format',
+						value: format.value,
+						style: 'cursor: pointer;' 
+					}
+				}) as HTMLInputElement;
+				
+				if (format.value === currentOutputFormat) {
+					formatRadioInput.checked = true;
+				}
+				
+				formatOption.createSpan({ text: format.text });
+			});
+
+			// 配置更新函数
+			const updateConfig = () => {
+				let outputFormat = 'preview';
+				const formatInput = formatContainer.querySelector('input[name="base64-image-format"]:checked') as HTMLInputElement;
+				if (formatInput) {
+					outputFormat = formatInput.value;
+				}
+
+				const newConfig = { ...config, outputFormat };
+				chainItem.setAttribute('data-config', JSON.stringify(newConfig));
+			};
+
+			formatContainer.addEventListener('change', updateConfig);
+			updateConfig();
 		}
 
 		// 字符集转UTF-8配置
@@ -2583,6 +2699,65 @@ export class CodecView extends ItemView {
 			updateConfig();
 		}
 
+		// 为文件哈希操作添加配置UI
+		if (['file-hash'].includes(operation.id)) {
+			const currentConfig = chainItem.getAttribute('data-config');
+			const config = currentConfig ? JSON.parse(currentConfig) : {};
+			const currentAlgorithm = config.algorithm as string || 'md5';
+
+			const configContainer = info.createEl('div', {
+				attr: { style: 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;' }
+			});
+
+			// 算法选择容器
+			const algorithmContainer = configContainer.createEl('div', {
+				attr: { style: 'display: flex; flex-direction: column; gap: 2px;' }
+			});
+
+			const algorithmLabel = algorithmContainer.createEl('label', {
+				text: '哈希算法:',
+				attr: { style: 'font-size: 11px; color: var(--text-muted);' }
+			});
+
+			const algorithmSelector = algorithmContainer.createEl('select', {
+				cls: 'codec-hash-algorithm-selector',
+				attr: {
+					style: 'width: 100%; font-size: 11px; padding: 4px 6px; border: 1px solid var(--background-modifier-border); border-radius: 4px; background: var(--background-secondary); color: var(--text-normal);'
+				}
+			});
+
+			// 添加算法选项
+			const algorithms = [
+				{ value: 'md5', label: 'MD5' },
+				{ value: 'sha-1', label: 'SHA-1' },
+				{ value: 'sha-256', label: 'SHA-256' },
+				{ value: 'sha-512', label: 'SHA-512' },
+				{ value: 'sm3', label: 'SM3' }
+			];
+
+			algorithms.forEach(algo => {
+				const option = algorithmSelector.createEl('option', {
+					value: algo.value,
+					text: algo.label
+				});
+				if (algo.value === currentAlgorithm) {
+					option.selected = true;
+				}
+			});
+
+			const updateConfig = () => {
+				const existingConfig = chainItem.getAttribute('data-config');
+				const parsedConfig = existingConfig ? JSON.parse(existingConfig) : {};
+				chainItem.setAttribute('data-config', JSON.stringify({
+					...parsedConfig,
+					algorithm: algorithmSelector.value
+				}));
+			};
+
+			algorithmSelector.addEventListener('change', updateConfig);
+			updateConfig();
+		}
+
 		// 为 CMAC 操作添加配置 UI
 		if (['cmac'].includes(operation.id)) {
 			const currentConfig = chainItem.getAttribute('data-config');
@@ -4216,10 +4391,20 @@ export class CodecView extends ItemView {
 			const file = target.files?.[0];
 			if (file) {
 				try {
-					// 在实际的 Obsidian 环境中，这里应该使用 app.vault.adapter.writeFile
-					// 但为了兼容性，我们使用简单的文件名提示
-					const fileName = file.name || 'codec-output.txt';
-					new Notice(`已保存到: ${fileName}`);
+					// 创建Blob对象
+					const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+					const url = URL.createObjectURL(blob);
+					
+					// 创建下载链接
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = file.name;
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					URL.revokeObjectURL(url);
+					
+					new Notice(`已保存到: ${file.name}`);
 				} catch (error) {
 					new Notice('保存失败: ' + (error instanceof Error ? error.message : '未知错误'));
 				}
@@ -4264,7 +4449,7 @@ export class CodecView extends ItemView {
 		}
 	}
 
-	private async importFileForHash(): Promise<void> {
+	private async selectFileAsInput(): Promise<void> {
 		const input = document.createElement('input');
 		input.type = 'file';
 		input.accept = '*'; // 支持所有文件类型
@@ -4274,79 +4459,100 @@ export class CodecView extends ItemView {
 			if (!file) return;
 
 			try {
-				// 检查文件大小，决定处理策略
-				const fileSize = file.size;
-				const isLargeFile = fileSize > 10 * 1024 * 1024; // 10MB
-
-				let fileContent: string;
-				let hashResult: string;
-
-				if (isLargeFile) {
-					// 大文件：分块读取并计算哈希
-					hashResult = await this.calculateFileHashChunked(file);
-				} else {
-					// 小文件：直接读取整个文件
-					const buffer = await file.arrayBuffer();
-					const bytes = new Uint8Array(buffer);
-					fileContent = this.bytesToText(bytes, file.type);
-					hashResult = this.calculateTextHash(fileContent, 'SHA256');
+				let fileData: {
+					name: string;
+					type: string;
+					size: number;
+					data: string | ArrayBuffer;
+					isFile: boolean;
+					mimeType?: string;
+				};
+				
+				try {
+					if (file.type.startsWith('image/')) {
+						// 图片文件：读取为ArrayBuffer
+						const arrayBuffer = await file.arrayBuffer();
+						
+						if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+							throw new Error('图片文件读取为空');
+						}
+						
+						console.log('图片文件读取成功，大小:', arrayBuffer.byteLength, '字节');
+						
+						fileData = {
+							name: file.name,
+							type: file.type,
+							size: file.size,
+							data: arrayBuffer,
+							isFile: true,
+							mimeType: file.type
+						};
+					} else {
+						// 其他文件：读取为文本
+						const textContent = await file.text();
+						
+						if (!textContent || textContent.length === 0) {
+							throw new Error('文本文件读取为空');
+						}
+						
+						console.log('文本文件读取成功，长度:', textContent.length, '字符');
+						
+						fileData = {
+							name: file.name,
+							type: file.type,
+							size: file.size,
+							data: textContent,
+							isFile: true,
+							mimeType: file.type
+						};
+					}
+				} catch (readError) {
+					throw new Error(`文件读取失败: ${readError instanceof Error ? readError.message : '未知错误'}`);
 				}
 
-				// 显示哈希结果
+				// 导入文件管理器
+				const { FileManager } = await import('./file-manager.js');
+				const fileManager = FileManager.getInstance();
+				const fileId = fileManager.storeFile(fileData);
+				const blobUrl = fileManager.getBlobUrl(fileId);
+
+				// 验证文件是否正确存储
+				const storedFile = fileManager.getFile(fileId);
+				if (!storedFile) {
+					throw new Error('文件存储失败');
+				}
+
+				// 验证Blob URL是否有效
+				if (!blobUrl || !blobUrl.startsWith('blob:')) {
+					throw new Error('Blob URL生成失败');
+				}
+
+				console.log('文件选择成功:', file.name, 'ID:', fileId, 'Blob URL:', blobUrl);
+
+				// 在输入框显示文件链接
+				const fileLink = `📄 ${file.name}
+🔗 文件链接: ${blobUrl}
+🆔 文件ID: ${fileId}
+
+(文件已选中，可使用图片转Base64、读取EXIF等操作)`;
+				
+				// 将文件链接放入输入框
 				const inputArea = this.containerEl.querySelector('.codec-input-area') as HTMLTextAreaElement;
 				if (inputArea) {
-					inputArea.value = `文件: ${file.name} (${this.formatFileSize(fileSize)})\n哈希值: ${hashResult}\n\n文件内容预览:\n${fileContent.substring(0, 1000)}...`;
+					inputArea.value = fileLink;
 					inputArea.dispatchEvent(new Event('input', { bubbles: true }));
-					new Notice(`文件哈希计算完成: ${file.name}`);
+					new Notice(`已选中文件: ${file.name}`);
 				}
 			} catch (error) {
-				new Notice(`文件读取失败: ${error instanceof Error ? error.message : '未知错误'}`);
+				new Notice(`文件选择失败: ${error instanceof Error ? error.message : '未知错误'}`);
 			}
 		};
 
 		input.click();
 	}
 
-	private async importImageForBase64(): Promise<void> {
-		const input = document.createElement('input');
-		input.type = 'file';
-		input.accept = 'image/*'; // 仅支持图片文件
-		
-		input.onchange = async (event) => {
-			const file = (event.target as HTMLInputElement).files?.[0];
-			if (!file) return;
-
-			try {
-				const reader = new FileReader();
-				
-				reader.onload = (e) => {
-					const arrayBuffer = e.target?.result as ArrayBuffer;
-					const bytes = new Uint8Array(arrayBuffer);
-					const base64 = this.arrayBufferToBase64(bytes);
-					const mimeType = file.type;
-					
-					// 生成Data URL格式的输出
-					const dataUrl = `data:${mimeType};base64,${base64}`;
-					
-					const inputArea = this.containerEl.querySelector('.codec-input-area') as HTMLTextAreaElement;
-					if (inputArea) {
-						inputArea.value = dataUrl;
-						inputArea.dispatchEvent(new Event('input', { bubbles: true }));
-						new Notice(`图片已转换为Base64: ${file.name}`);
-					}
-				};
-				
-				reader.onerror = () => {
-					new Notice('图片读取失败');
-				};
-				
-				reader.readAsArrayBuffer(file);
-			} catch (error) {
-				new Notice(`图片处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
-			}
-		};
-
-		input.click();
+	private bytesToHex(bytes: Uint8Array): string {
+		return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
 	}
 
 	private arrayBufferToBase64(buffer: ArrayBuffer): string {

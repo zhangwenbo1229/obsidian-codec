@@ -10,6 +10,9 @@ import {
 	Base64ToImageOperation
 } from './implementations/images/base64-to-image';
 import { 
+	ReadExifOperation
+} from './implementations/other/read-exif';
+import { 
 	URLEncodeOperation, 
 	URLDecodeOperation 
 } from './implementations/encodings/url';
@@ -53,10 +56,10 @@ import {
 import { 
 	SHA512Operation 
 } from './implementations/hashes/sha512';
-import { 
+import {
 	SM3Operation 
 } from './implementations/hashes/sm3';
-import { 
+import {
 	FileHashOperation 
 } from './implementations/hashes/file-hash';
 import { 
@@ -171,6 +174,7 @@ export function registerAllOperations(): void {
 	globalRegistry.register(new Base64EncodeOperation());
 	globalRegistry.register(new Base64DecodeOperation());
 	globalRegistry.register(new Base64ToImageOperation());
+	globalRegistry.register(new ReadExifOperation());
 	globalRegistry.register(new ImageToBase64Operation());
 	globalRegistry.register(new URLEncodeOperation());
 	globalRegistry.register(new URLDecodeOperation());
